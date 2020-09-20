@@ -1,0 +1,8 @@
+-- This file should undo anything in `up.sql`
+
+DROP TABLE HW_PROGRESS;
+DROP TABLE CANCELS;
+DROP TABLE HOMEWORK;
+DROP TABLE USERS;
+DROP TABLE CLASSES;
+

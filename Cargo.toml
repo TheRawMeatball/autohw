@@ -1,0 +1,24 @@
+[package]
+name = "autohw"
+version = "0.1.0"
+authors = ["TheRawMeatball <therawmeatball@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rocket = { git = "https://github.com/SergioBenitez/Rocket" }
+diesel = { version = "^1.1.0", features = ["postgres", "r2d2", "chrono"] }
+handlebars = { version = "3.0.0", features = ["dir_source"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bcrypt = "0.8.2"
+chrono = { version = "0.4", features = ["serde"] }
+base64 = "0.12"
+futures = "0.3"
+
+
+[dependencies.rocket_contrib]
+git = "https://github.com/SergioBenitez/Rocket"
+default-features = false
+features = ["handlebars_templates", "diesel_postgres_pool"]
