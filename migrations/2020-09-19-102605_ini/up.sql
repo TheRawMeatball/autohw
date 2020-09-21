@@ -21,7 +21,7 @@ CREATE TABLE homework (
     due_date DATE,
     detail TEXT NOT NULL,
     amount SMALLINT NOT NULL,
-    weekday INTEGER,
+    day_of_week INTEGER,
     class_id INTEGER,
     user_id INTEGER,
     FOREIGN KEY (class_id)

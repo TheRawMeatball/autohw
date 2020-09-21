@@ -1,7 +1,7 @@
 use crate::pub_imports::*;
+use models::user::User;
 use rocket::request::FlashMessage;
 use rocket_contrib::templates::Template;
-use models::user::User;
 
 mod api;
 
@@ -13,8 +13,12 @@ pub fn routes() -> Vec<rocket::Route> {
 async fn index(user: AuthUser, conn: DbConn) -> Template {
     let u = User::from(user).clone();
     let u2 = u.clone();
-    let hw = conn.run(move |c| actions::homework::get_homework_for_user(&u, c)).await.unwrap();
-    
+    let hw = conn
+        .run(move |c| actions::homework::get_homework_for_user(&u, c))
+        .await
+        .unwrap();
+    //let today_hw = actions::homework::create_schedule(uhw, [1;7]);
+
     let data = json!({
         "user": u2,
         "title": "Home",

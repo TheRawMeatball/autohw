@@ -7,6 +7,9 @@ extern crate diesel;
 #[macro_use]
 extern crate serde_json;
 
+extern crate chrono;
+extern crate num_traits;
+
 use diesel::prelude::*;
 use rocket_contrib::templates::Template;
 

@@ -19,7 +19,7 @@ table! {
         due_date -> Nullable<Date>,
         detail -> Text,
         amount -> Int2,
-        weekday -> Nullable<Int4>,
+        day_of_week -> Nullable<Int4>,
         class_id -> Nullable<Int4>,
         user_id -> Nullable<Int4>,
     }

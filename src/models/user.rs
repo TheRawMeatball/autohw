@@ -1,5 +1,5 @@
 use crate::{auth_guard::AuthUser, schema::users};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(FromForm)]
 pub struct RegisterFormModel {
