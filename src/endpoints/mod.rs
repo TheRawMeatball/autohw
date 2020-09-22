@@ -13,18 +13,11 @@ pub fn routes() -> Vec<rocket::Route> {
 async fn index(user: AuthUser, conn: DbConn) -> Template {
     let u = User::from(user).clone();
     let u2 = u.clone();
-<<<<<<< HEAD
     let hw = conn
         .run(move |c| actions::homework::get_homework_for_user(&u, c))
         .await
         .unwrap();
     //let today_hw = actions::homework::create_schedule(uhw, [1;7]);
-=======
-    let _hw = conn
-        .run(move |c| actions::homework::get_homework_for_user(&u, c))
-        .await
-        .unwrap();
->>>>>>> 8c0ee6a793eef44583375c947ca1d1417d5754c1
 
     let data = json!({
         "user": u2,
