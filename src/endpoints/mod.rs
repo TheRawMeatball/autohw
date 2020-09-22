@@ -1,7 +1,7 @@
 use crate::pub_imports::*;
+use models::user::User;
 use rocket::request::FlashMessage;
 use rocket_contrib::templates::Template;
-use models::user::User;
 
 mod api;
 
@@ -13,12 +13,49 @@ pub fn routes() -> Vec<rocket::Route> {
 async fn index(user: AuthUser, conn: DbConn) -> Template {
     let u = User::from(user).clone();
     let u2 = u.clone();
-    let hw = conn.run(move |c| actions::homework::get_homework_for_user(&u, c)).await.unwrap();
-    
+    let _hw = conn
+        .run(move |c| actions::homework::get_homework_for_user(&u, c))
+        .await
+        .unwrap();
+
     let data = json!({
         "user": u2,
         "title": "Home",
-        "homework": hw,
+        "homework": [
+            {
+                "amount": 3,
+                "details": {
+                    "detail":"hi",
+                    "progress":5,
+                    "amount":20,
+                    "due_date":{
+                        "Date":"2020-09-30",
+                    },
+                },
+            },
+            {
+                "amount": 5,
+                "details": {
+                    "detail":"hi",
+                    "progress":5,
+                    "amount":13,
+                    "due_date":{
+                        "Date":"2020-09-30",
+                    },
+                },
+            },
+            {
+                "amount": 9,
+                "details": {
+                    "detail":"hi",
+                    "progress":2,
+                    "amount":16,
+                    "due_date":{
+                        "Date":"2020-09-30",
+                    },
+                },
+            },
+        ],
     });
 
     Template::render("index", &data)

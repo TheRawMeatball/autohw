@@ -2,7 +2,7 @@ use crate::pub_imports::*;
 use models::class::DbClassModel;
 use models::user::DbUserModel;
 use schema::homework;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(FromForm)]
 pub struct AddHomeworkModel {

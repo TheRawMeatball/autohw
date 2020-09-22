@@ -1,9 +1,24 @@
 {{#*inline "page"}}
     <h1>Hi {{user.name}}</h1>
     
-    <form action="/api/homework/add" method="post">
-        <input type="date" name="" id="">
-    </form>
+    {{#each homework}}
+	{{> hw}}
+    {{/each}}
+{{/inline}}
+
+{{#*inline "hw"}}
+   <div class="card text-white bg-dark mb-3" style="max-width: 20rem;">
+    <div class="card-body">
+	<h4 class="card-title">{{hw.detail}}</h4>
+	<p class="card-text">
+	    Some quick example text to build on the card title and make up the bulk of the card's content.
+	</p>
+	<div class="progress">
+	    <div class="progress-bar" role="progressbar" style="width: {{percent details.progress details.amount}}%"></div>
+	    <div class="progress-bar bg-success" role="progressbar" style="width: {{percent amount details.amount}}%"></div>
+	</div>
+    </div>
+   </div> 
 {{/inline}}
 
 {{~> layout~}}
