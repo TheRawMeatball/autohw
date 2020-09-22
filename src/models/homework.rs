@@ -42,7 +42,7 @@ pub struct ProgressHomeworkModel {
     pub progress: i16,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 pub struct UserHomework {
     pub due_date: DueDate,
     pub amount: i16,
@@ -52,13 +52,13 @@ pub struct UserHomework {
     pub db_id: i32,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct DailyHomework {
     pub hw: UserHomework,
     pub amount: i32,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum DueDate {
     Date(chrono::NaiveDate),
     Repeat(i32),

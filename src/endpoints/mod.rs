@@ -1,5 +1,6 @@
 use crate::pub_imports::*;
-use models::user::User;
+use chrono::NaiveDate;
+use models::{homework::UserHomework, user::User};
 use rocket::request::FlashMessage;
 use rocket_contrib::templates::Template;
 
@@ -13,50 +14,61 @@ pub fn routes() -> Vec<rocket::Route> {
 async fn index(user: AuthUser, conn: DbConn) -> Template {
     let u = User::from(user).clone();
     let u2 = u.clone();
-    let hw = conn
-        .run(move |c| actions::homework::get_homework_for_user(&u, c))
-        .await
-        .unwrap();
-    //let today_hw = actions::homework::create_schedule(uhw, [1;7]);
+
+    let mock_data = vec![
+        UserHomework {
+            amount: 5,
+            db_id: -1,
+            detail: "9-24".into(),
+            due_date: models::homework::DueDate::Date(NaiveDate::from_ymd(2020, 9, 24)),
+            progress: 2,
+        },
+        UserHomework {
+            amount: 12,
+            db_id: -1,
+            detail: "9-30".into(),
+            due_date: models::homework::DueDate::Date(NaiveDate::from_ymd(2020, 9, 30)),
+            progress: 2,
+        },
+        UserHomework {
+            amount: 13,
+            db_id: -1,
+            detail: "9-28".into(),
+            due_date: models::homework::DueDate::Date(NaiveDate::from_ymd(2020, 9, 28)),
+            progress: 4,
+        },
+        UserHomework {
+            amount: 17,
+            db_id: -1,
+            detail: "r4".into(),
+            due_date: models::homework::DueDate::Repeat(4),
+            progress: 22,
+        },
+        UserHomework {
+            amount: 2,
+            db_id: -1,
+            detail: "r3".into(),
+            due_date: models::homework::DueDate::Repeat(3),
+            progress: 0,
+        },
+        UserHomework {
+            amount: 20,
+            db_id: -1,
+            detail: "10-1".into(),
+            due_date: models::homework::DueDate::Date(NaiveDate::from_ymd(2020, 10, 1)),
+            progress: 4,
+        },
+    ];
+
+    let hw = mock_data;//conn.run(move |c| actions::homework::get_homework_for_user(&u, c)).await.unwrap();
+    let schedule = actions::homework::create_schedule(&hw);
 
     let data = json!({
         "user": u2,
         "title": "Home",
-        "homework": [
-            {
-                "amount": 3,
-                "details": {
-                    "detail":"hi",
-                    "progress":5,
-                    "amount":20,
-                    "due_date":{
-                        "Date":"2020-09-30",
-                    },
-                },
-            },
-            {
-                "amount": 5,
-                "details": {
-                    "detail":"hi",
-                    "progress":5,
-                    "amount":13,
-                    "due_date":{
-                        "Date":"2020-09-30",
-                    },
-                },
-            },
-            {
-                "amount": 9,
-                "details": {
-                    "detail":"hi",
-                    "progress":2,
-                    "amount":16,
-                    "due_date":{
-                        "Date":"2020-09-30",
-                    },
-                },
-            },
-        ],
+        "today": schedule[0],
+        "all": schedule,
+        "hw": hw,
     });
 
     Template::render("index", &data)

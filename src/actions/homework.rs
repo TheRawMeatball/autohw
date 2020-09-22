@@ -2,7 +2,7 @@ use std::time;
 
 use crate::models::homework::*;
 use crate::pub_imports::*;
-use chrono::{Datelike, Duration, Utc};
+use chrono::{Datelike, Duration, NaiveDate, Utc};
 use diesel::{prelude::*, PgConnection};
 use models::user::User;
 use num_traits::FromPrimitive;
@@ -53,9 +53,15 @@ pub fn get_homework_for_user(
     use schema::homework::dsl::*;
 
     let source = homework.inner_join(schema::hw_progress::table);
+    let now = Utc::now().date().naive_local();
 
     source
-        .filter(user_id.eq(user.id).or(class_id.eq(user.class_id)))
+        .filter(
+            user_id
+                .eq(user.id)
+                .or(class_id.eq(user.class_id))
+                .and(due_date.gt(now)),
+        )
         .select((
             id,
             due_date,
@@ -74,85 +80,155 @@ pub fn get_homework_for_user(
         })
 }
 
+#[derive(Clone, Debug)]
 struct HwModel {
     hw: UserHomework,
     due: i32,
 }
 
-pub fn create_schedule(all: Vec<UserHomework>, weights: [i32; 7]) -> Vec<Vec<DailyHomework>> {
+impl HwModel {
+    fn left(&self) -> i16 {
+        self.hw.amount - self.hw.progress
+    }
+}
+
+pub fn create_schedule(all: &Vec<UserHomework>) -> Vec<Vec<DailyHomework>> {
     let now = Utc::now().date().naive_local();
 
-    let (fixed, repeat): (Vec<_>, Vec<_>) = all
-        .into_iter()
-        .map(|m| match m.due_date {
-            DueDate::Date(_) => (Some(m), None),
-            DueDate::Repeat(_) => (None, Some(m)),
-        })
-        .unzip();
-
-    let last_date = fixed
+    let last_date = all
         .iter()
-        .filter_map(|m| {
-            m.as_ref().map(|model| match &model.due_date {
-                DueDate::Date(d) => d.clone(),
-                _ => unreachable!(),
-            })
+        .filter_map(|m| match &m.due_date {
+            DueDate::Date(d) => Some(d.clone()),
+            _ => None,
         })
         .max()
         .unwrap_or(now.succ());
 
-    let last_day = (last_date - now).num_days() as i32;
+    let mut last_day = (last_date - now).num_days().abs();
 
-    let fixed = fixed.into_iter().filter_map(|x| x);
-    let repeat = repeat.into_iter().filter_map(|x| x);
-
-    let all : Vec<HwModel> = repeat
-        .flat_map(|model| match model.due_date {
+    let mut all: Vec<_> = all
+        .iter()
+        .map(|m| match m.due_date {
             DueDate::Repeat(day_of_week) => {
                 let dow = chrono::Weekday::from_i32(day_of_week).unwrap();
-                let mut dist = i64::MAX;
-                let mut date =
-                    chrono::NaiveDate::from_weekday_of_month(now.year(), now.month(), dow, 1);
+                let mut distance = i64::MAX;
+                let mut date = NaiveDate::from_weekday_of_month(now.year(), now.month(), dow, 1);
 
                 let mut v = vec![];
+                let one_week =
+                    Duration::from_std(time::Duration::from_secs(60 * 60 * 24 * 7)).unwrap();
+
+                let mut progress = m.progress;
 
                 loop {
                     if date < now {
-                        date = date
-                            + Duration::from_std(time::Duration::from_secs(60 * 60 * 24 * 7))
-                                .unwrap();
+                        date = date + one_week;
                         continue;
                     }
 
-                    if dist > (last_date - date).num_days().abs() {
-                        dist = (last_date - date).num_days().abs();
+                    let day = (last_date - date).num_days().abs();
+                    if distance > day {
+                        distance = day;
 
-                        v.push(HwModel {
-                            hw: model.clone(),
-                            due: (last_date - date).num_days() as i32,
-                        });
+                        if last_day < (date - now).num_days() {
+                            last_day = (date - now).num_days();
+                        }
 
-                        date = date
-                            + Duration::from_std(time::Duration::from_secs(60 * 60 * 24 * 7))
-                                .unwrap();
+                        if progress >= m.amount {
+                            progress -= m.amount;
+                        } else {
+                            let mut m = m.clone();
+                            m.detail = format!("{} ({})", m.detail, date);
+                            m.progress = progress;
+                            progress = 0;
+                            v.push(HwModel {
+                                hw: m,
+                                due: (date - now).num_days() as i32 - 1,
+                            });
+                        }
+
+                        date = date + one_week;
                     } else {
                         break;
                     }
                 }
                 v
             }
-            _ => unreachable!(),
+            DueDate::Date(d) => vec![HwModel {
+                hw: m.clone(),
+                due: (d - now).num_days() as i32 - 1,
+            }],
         })
-        .chain(fixed.map(|model| match model.due_date {
-            DueDate::Date(d) => HwModel {
-                hw: model,
-                due: (last_date - d).num_days() as i32,
-            },
-            _ => unreachable!(),
-        }))
+        .flatten()
         .collect();
 
-    panic!();
+    let mut workload: Vec<i16> = vec![0; last_day as usize];
+
+    for hw in all.iter() {
+        workload[hw.due as usize] += hw.hw.amount - hw.hw.progress;
+    }
+
+    all.sort_by_key(|x| x.due);
+
+    println!("{:#?}", all);
+
+    let result = create_work_split(workload)
+        .iter()
+        .fold((all, vec![]), |(mut all, mut v), load| {
+            let mut load = *load;
+            let mut for_today = vec![];
+            while load > 0 {
+                if all[0].left() > load {
+                    for_today.push(DailyHomework {
+                        hw: all[0].hw.clone(),
+                        amount: load as i32,
+                    });
+                    all[0].hw.progress += load;
+                    load = 0; // break;
+                } else {
+                    let hw = all.remove(0);
+                    let left = hw.left();
+                    for_today.push(DailyHomework {
+                        hw: hw.hw,
+                        amount: left as i32,
+                    });
+                    load -= left;
+                }
+            }
+            println!("{:?}", for_today);
+            v.push(for_today);
+            (all, v)
+        });
+
+    result.1
+}
+
+fn create_work_split(workload: Vec<i16>) -> Vec<i16> {
+    let last_day = workload.len();
+    let mut work_split: Vec<i16> = vec![0; last_day as usize];
+
+    for day in 0..last_day {
+        for start in 0..=day {
+            let slice = &mut work_split[start as usize..=day as usize];
+            let sum = slice.iter().sum::<i16>() as usize + workload[day as usize] as usize;
+            let avg = sum as f32 / slice.len() as f32;
+            if avg > *slice.iter().max().unwrap() as f32 {
+                let added = avg.floor() as i16;
+
+                for load in slice.iter_mut() {
+                    *load = added;
+                }
+
+                for i in 0..(sum % slice.len()) {
+                    slice[i] += 1;
+                }
+
+                break;
+            }
+        }
+    }
+
+    work_split
 }
 
 #[derive(Debug)]

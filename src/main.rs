@@ -11,6 +11,7 @@ extern crate chrono;
 extern crate num_traits;
 
 use diesel::prelude::*;
+use models::homework::DueDate;
 use rocket_contrib::templates::{handlebars, Template};
 
 mod actions;
@@ -44,6 +45,36 @@ fn percent_helper(
     Ok(())
 }
 
+fn due_date_helper(
+    h: &Helper<'_, '_>,
+    _: &Handlebars,
+    _: &Context,
+    _: &mut RenderContext<'_, '_>,
+    out: &mut dyn Output,
+) -> HelperResult {
+    let dd: DueDate = serde_json::from_value(h.param(0).unwrap().value().clone()).unwrap();
+
+    match dd {
+        DueDate::Date(d) => {
+            out.write(&format!("{} tarihi için", d))?;
+        }
+        DueDate::Repeat(r) => {
+            out.write(&format!("Her {}", match r {
+                0 => "pazartesiye",
+                1 => "salıya",
+                2 => "çarşambaya",
+                3 => "perşembeye",
+                4 => "cumaya",
+                5 => "cumartesiye",
+                6 => "pazara",
+                _ => unreachable!(),
+            }))?;
+        }
+    }
+    
+    Ok(())
+}
+
 #[launch]
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
@@ -52,6 +83,9 @@ fn rocket() -> rocket::Rocket {
             engines
                 .handlebars
                 .register_helper("percent", Box::new(percent_helper));
+            engines
+                .handlebars
+                .register_helper("dueDate", Box::new(due_date_helper));
         }))
         .mount("/", endpoints::routes())
 }
