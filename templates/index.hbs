@@ -22,7 +22,7 @@
 			<h2 class="text-center">Plan</h2>
 			{{#each all}}
 				{{#each this}}
-					{{> hwFull}}
+					{{> hwPlan}}
 				{{/each}}
 				<div class="dropdown-divider"></div>
 			{{/each}}
@@ -31,17 +31,45 @@
 {{/inline}}
 
 {{#*inline "hwFull"}}
-    {{#> hwBase}}
-		<h4 class="card-title">{{hw.detail}}</h4>
-		<p class="card-text">
-		    {{dueDate hw.due_date}} {{hw.amount}} test var.
-			{{hw.progress}} test yapıldı, {{amount}} test yapılacak.
-		</p>
-		<div class="progress">
-		    <div class="progress-bar" role="progressbar" style="width: {{percent hw.progress hw.amount}}%"></div>
-		    <div class="progress-bar bg-success" role="progressbar" style="width: {{percent amount hw.amount}}%"></div>
-		</div>
-	{{/hwBase}}
+	{{#if (sub hw.amount hw.delta)}}
+    	{{#> hwBase}}
+			<h4 class="card-title">{{hw.detail}}</h4>
+			<p class="card-text">
+			    {{dueDate hw.due_date}} {{hw.amount}} test var.
+				{{hw.progress}} test önceden yapıldı, {{amount}} test yapılacak. 
+				{{#if hw.delta}}
+					{{hw.delta}} test bitti, {{sub amount hw.delta}} test kaldı.
+				{{/if}}
+			</p>
+			<div class="progress mb-2">
+			    <div class="progress-bar" role="progressbar" style="width: {{percent hw.progress hw.amount}}%"></div>
+			    <div class="progress-bar bg-success" role="progressbar" style="width: {{percent hw.delta hw.amount}}%"></div>
+			    <div class="progress-bar bg-warning" role="progressbar" style="width: {{percent (sub amount hw.delta) hw.amount}}%"></div>
+			</div>
+			<button class="btn bg-primary">Günü bitir</button>
+			<button class="btn bg-primary">Ekle</button>
+		{{/hwBase}}
+	{{/if}}
+{{/inline}}
+
+{{#*inline "hwPlan"}}
+	{{#if (sub hw.amount hw.delta)}}
+    	{{#> hwBase}}
+			<h4 class="card-title">{{hw.detail}}</h4>
+			<p class="card-text">
+			    {{dueDate hw.due_date}} {{hw.amount}} test var.
+				{{hw.progress}} test önceden yapıldı, {{amount}} test yapılacak. 
+				{{#if hw.delta}}
+					{{hw.delta}} test bitti, {{sub amount hw.delta}} test kaldı.
+				{{/if}}
+			</p>
+			<div class="progress mb-2">
+			    <div class="progress-bar" role="progressbar" style="width: {{percent hw.progress hw.amount}}%"></div>
+			    <div class="progress-bar bg-success" role="progressbar" style="width: {{percent hw.delta hw.amount}}%"></div>
+			    <div class="progress-bar bg-warning" role="progressbar" style="width: {{percent (sub amount hw.delta) hw.amount}}%"></div>
+			</div>
+		{{/hwBase}}
+	{{/if}}
 {{/inline}}
 
 {{#*inline "hwSimple"}}

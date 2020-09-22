@@ -30,6 +30,8 @@ table! {
         homework_id -> Int4,
         user_id -> Int4,
         progress -> Int2,
+        delta -> Int2,
+        delta_date -> Date,
     }
 }
 

@@ -38,6 +38,8 @@ CREATE TABLE hw_progress (
     homework_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     progress SMALLINT NOT NULL,
+    delta SMALLINT NOT NULL,
+    delta_date DATE NOT NULL,
     PRIMARY KEY (homework_id, user_id),
     FOREIGN KEY (homework_id)
 	REFERENCES homework (id)

@@ -7,7 +7,6 @@ pub fn add_user(
     conn: &PgConnection,
 ) -> Result<DbUserModel, UserApiError> {
     if model.name.len() < 4 {
-        println!("asdasd");
         return Err(UserApiError::UsernameTooShort);
     } else if model.password != model.confirm_password {
         return Err(UserApiError::MismatchedPasswords);

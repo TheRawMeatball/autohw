@@ -4,7 +4,7 @@ use crate::models::homework::*;
 use crate::pub_imports::*;
 use chrono::{Datelike, Duration, NaiveDate, Utc};
 use diesel::{prelude::*, PgConnection};
-use models::user::User;
+use models::{hw_progress::HWProgressModel, user::User};
 use num_traits::FromPrimitive;
 
 pub fn add_homework(
@@ -50,34 +50,51 @@ pub fn get_homework_for_user(
     user: &User,
     conn: &PgConnection,
 ) -> Result<Vec<UserHomework>, HomeworkApiError> {
-    use schema::homework::dsl::*;
-
-    let source = homework.inner_join(schema::hw_progress::table);
+    let source = schema::homework::table.inner_join(schema::hw_progress::table);
     let now = Utc::now().date().naive_local();
 
-    source
-        .filter(
-            user_id
-                .eq(user.id)
-                .or(class_id.eq(user.class_id))
-                .and(due_date.gt(now)),
-        )
-        .select((
-            id,
-            due_date,
-            detail,
-            amount,
-            day_of_week,
-            schema::hw_progress::progress,
-        ))
-        .load::<ProgressHomeworkModel>(conn)
-        .map_err(|e| HomeworkApiError::DieselError(e))
-        .map(|models| {
-            models
-                .into_iter()
-                .map(|model| UserHomework::from(model))
-                .collect()
-        })
+    let result = {
+        use schema::homework::dsl::*;
+
+        source
+            .filter(
+                user_id
+                    .eq(user.id)
+                    .or(class_id.eq(user.class_id))
+                    .and(due_date.gt(now)),
+            )
+            .select((
+                id,
+                due_date,
+                detail,
+                amount,
+                day_of_week,
+                schema::hw_progress::progress,
+                schema::hw_progress::delta,
+                schema::hw_progress::delta_date,
+            ))
+            .load::<ProgressHomeworkModel>(conn)
+            .map_err(|e| HomeworkApiError::DieselError(e))?
+    };
+
+    for hw in result.iter() {
+        if hw.delta_date != Utc::now().date().naive_local() {
+            use schema::hw_progress::dsl::*;
+            let mut x: HWProgressModel = hw_progress
+                .filter(homework_id.eq(hw.id))
+                .first(conn)
+                .unwrap();
+            x.progress += x.delta;
+            x.delta = 0;
+            x.delta_date = now;
+            x.save_changes::<HWProgressModel>(conn).unwrap();
+        }
+    }
+
+    Ok(result
+        .into_iter()
+        .map(|model| UserHomework::from(model))
+        .collect())
 }
 
 #[derive(Clone, Debug)]
@@ -170,35 +187,33 @@ pub fn create_schedule(all: &Vec<UserHomework>) -> Vec<Vec<DailyHomework>> {
 
     all.sort_by_key(|x| x.due);
 
-    println!("{:#?}", all);
-
-    let result = create_work_split(workload)
-        .iter()
-        .fold((all, vec![]), |(mut all, mut v), load| {
-            let mut load = *load;
-            let mut for_today = vec![];
-            while load > 0 {
-                if all[0].left() > load {
-                    for_today.push(DailyHomework {
-                        hw: all[0].hw.clone(),
-                        amount: load as i32,
-                    });
-                    all[0].hw.progress += load;
-                    load = 0; // break;
-                } else {
-                    let hw = all.remove(0);
-                    let left = hw.left();
-                    for_today.push(DailyHomework {
-                        hw: hw.hw,
-                        amount: left as i32,
-                    });
-                    load -= left;
+    let result =
+        create_work_split(workload)
+            .iter()
+            .fold((all, vec![]), |(mut all, mut v), load| {
+                let mut load = *load;
+                let mut for_today = vec![];
+                while load > 0 {
+                    if all[0].left() > load {
+                        for_today.push(DailyHomework {
+                            hw: all[0].hw.clone(),
+                            amount: load as i32,
+                        });
+                        all[0].hw.progress += load;
+                        load = 0; // break;
+                    } else {
+                        let hw = all.remove(0);
+                        let left = hw.left();
+                        for_today.push(DailyHomework {
+                            hw: hw.hw,
+                            amount: left as i32,
+                        });
+                        load -= left;
+                    }
                 }
-            }
-            println!("{:?}", for_today);
-            v.push(for_today);
-            (all, v)
-        });
+                v.push(for_today);
+                (all, v)
+            });
 
     result.1
 }
