@@ -1,2 +1,6 @@
 [global.databases]
 db = { url = "postgresql://postgres:password@localhost/mydb" }
+
+[global]
+address = "0.0.0.0"
+secret_key = "kvPGsdMXIBvw+Tc3qjBOLeT3SCZ2a51pD55uUweW6+A="

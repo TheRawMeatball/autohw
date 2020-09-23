@@ -29,7 +29,8 @@ pub struct DbHomeworkModel {
     pub detail: String,
     pub amount: i16,
     pub day_of_week: Option<i32>,
-    pub repeat_period: Option<i32>,
+    pub class_id: Option<i32>,
+    pub user_id: Option<i32>,
 }
 
 #[derive(Queryable, Serialize, Deserialize)]

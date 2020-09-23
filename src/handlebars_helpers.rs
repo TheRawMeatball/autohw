@@ -21,7 +21,10 @@ fn percent_helper(
     out: &mut dyn Output,
 ) -> HelperResult {
     if let (Some(val), Some(all)) = (h.param(0), h.param(1)) {
-        let val = val.value().as_f64().unwrap_or_else(|| val.value().as_str().unwrap().parse::<f64>().unwrap());
+        let val = val
+            .value()
+            .as_f64()
+            .unwrap_or_else(|| val.value().as_str().unwrap().parse::<f64>().unwrap());
         let all = all.value().as_f64().unwrap();
         out.write(&(100.0 * val / all).to_string())?;
     }

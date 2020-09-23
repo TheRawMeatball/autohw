@@ -7,6 +7,37 @@ use diesel::{prelude::*, PgConnection};
 use models::{hw_progress::HWProgressModel, user::User};
 use num_traits::FromPrimitive;
 
+pub fn change_progress(
+    user: &User,
+    amount: i16,
+    id: i32,
+    use_delta: bool,
+    conn: &PgConnection,
+) -> Result<(), HomeworkApiError> {
+    use schema::hw_progress::dsl::*;
+
+    let mut model: HWProgressModel = hw_progress
+        .filter(homework_id.eq(id).and(user_id.eq(user.id)))
+        .first(conn)
+        .map_err(|e| HomeworkApiError::DieselError(e))?;
+
+    if use_delta {
+        model.delta += amount;
+        if model.delta_date != now() {
+            model.progress += model.delta;
+            model.delta = 0;
+            model.delta_date = now();
+        }
+    } else {
+        model.progress += amount;
+    }
+
+    model
+        .save_changes::<HWProgressModel>(conn)
+        .map(|_| ())
+        .map_err(|e| HomeworkApiError::DieselError(e))
+}
+
 pub fn add_homework(
     model: &AddHomeworkModel,
     user: AuthUser,
@@ -36,11 +67,49 @@ pub fn add_homework(
         detail: &model.detail,
     };
 
-    {
+    let hw_id = {
         use schema::homework::dsl::*;
-        if let Err(e) = diesel::insert_into(homework).values(insert).execute(conn) {
-            return Err(HomeworkApiError::DieselError(e));
-        }
+        diesel::insert_into(homework)
+            .values(insert)
+            .get_result::<DbHomeworkModel>(conn)
+            .map_err(|e| HomeworkApiError::DieselError(e))?
+            .id
+    };
+
+    let insert = if model.for_self {
+        vec![HWProgressModel {
+            user_id: user.id,
+            delta: 0,
+            progress: 0,
+            delta_date: now(),
+            homework_id: hw_id,
+        }]
+    } else {
+        use schema::users::dsl::*;
+
+        users
+            .filter(class_id.eq(user.class_id))
+            .select(id)
+            .load(conn)
+            .map_err(|e| HomeworkApiError::DieselError(e))?
+            .iter()
+            .map(|user_id| HWProgressModel {
+                user_id: *user_id,
+                delta: 0,
+                progress: 0,
+                delta_date: now(),
+                homework_id: hw_id,
+            })
+            .collect()
+    };
+
+    {
+        use schema::hw_progress::dsl::*;
+
+        diesel::insert_into(hw_progress)
+            .values(insert)
+            .execute(conn)
+            .map_err(|e| HomeworkApiError::DieselError(e))?;
     }
 
     Ok(())
@@ -51,7 +120,7 @@ pub fn get_homework_for_user(
     conn: &PgConnection,
 ) -> Result<Vec<UserHomework>, HomeworkApiError> {
     let source = schema::homework::table.inner_join(schema::hw_progress::table);
-    let now = Utc::now().date().naive_local();
+    let now = now();
 
     let result = {
         use schema::homework::dsl::*;
@@ -110,7 +179,7 @@ impl HwModel {
 }
 
 pub fn create_schedule(all: &Vec<UserHomework>) -> Vec<Vec<DailyHomework>> {
-    let now = Utc::now().date().naive_local();
+    let now = now();
 
     let last_date = all
         .iter()
@@ -262,4 +331,9 @@ impl From<diesel::result::Error> for HomeworkApiError {
     fn from(e: diesel::result::Error) -> Self {
         HomeworkApiError::DieselError(e)
     }
+}
+
+#[inline]
+fn now() -> NaiveDate {
+    Utc::now().date().naive_local()
 }

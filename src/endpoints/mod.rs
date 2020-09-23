@@ -66,7 +66,10 @@ async fn index(user: AuthUser, conn: DbConn) -> Template {
         },
     ];
 
-    let hw = mock_data; //conn.run(move |c| actions::homework::get_homework_for_user(&u, c)).await.unwrap();
+    let hw = conn
+        .run(move |c| actions::homework::get_homework_for_user(&u, c))
+        .await
+        .unwrap();
     let schedule = actions::homework::create_schedule(&hw);
 
     let data = json!({
