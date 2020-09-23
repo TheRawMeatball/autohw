@@ -1,0 +1,71 @@
+{{#*inline "page"}}
+	{{#if flash}}
+		<div class="row alert alert-danger">
+			{{flash}}
+		</div>
+	{{/if}}
+	<div class="row">
+		<div class="col-lg">
+			<h1 class="text-center">Ödev ekle</h1>
+			<form action="/api/homework/add" method="post">
+				<div class="form-group">
+					<label for="detail">Açıklama</label>
+					<input type="text" class="form-control" name="detail" id="detail">
+				</div>
+				<div class="form-group">
+					<label for="amount">Test sayısı</label>
+					<input type="number" class="form-control" name="amount" id="amount">
+				</div>
+				<div class="form-check">
+					<input class="form-check-input" name="for_self" type="checkbox" id="for-self">
+					<label class="form-check-label" for="for-self">
+						Sadece benim için
+					</label>
+				</div>
+				<div class="form-check">
+					<input class="form-check-input" type="checkbox" value="" id="repeating">
+					<label class="form-check-label" for="repeating">
+						Tekrarlı
+					</label>
+				</div>
+				<div class="form-group" id="dueDateDiv">
+					<label for="due-date">Son teslim</label>
+					<input type="date" class="form-control" name="due_date" id="due-date" disabled="false">
+				</div>
+				<label for="weekday" id="weekdayLabel">Gün</label>
+				<select class="form-control mb-3" name="weekday" id="weekday" disabled="false">
+					<option value="0">Pazartesi</option>
+					<option value="1">Salı</option>
+					<option value="2">Çarşamba</option>
+					<option value="3">Perşembe</option>
+					<option value="4">Cuma</option>
+					<option value="5">Cumartesi</option>
+					<option value="6">Pazar</option>
+				</select>
+				<button type="submit" class="btn btn-primary">Ekle</button>
+			</form>
+		</div>
+	</div>
+{{/inline}}
+
+{{#*inline "script"}}
+	<script>
+		$("#repeating").change(function() {
+			if (this.checked) {
+				$('#dueDateDiv').hide();
+				$('#due-date').prop("disabled", true);
+				$('#weekdayLabel').show();
+				$('#weekday').show();
+				$('#weekday').prop("disabled", false);
+			} else {
+				$('#dueDateDiv').show();
+				$('#due-date').prop("disabled", false);
+				$('#weekdayLabel').hide();
+				$('#weekday').hide();
+				$('#weekday').prop("disabled", true);
+			}
+		});
+		$("#repeating").trigger("change");
+	</script>
+{{/inline}}
+{{~> layout~}}

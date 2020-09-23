@@ -11,7 +11,7 @@ pub fn routes() -> Vec<rocket::Route> {
 async fn register(
     cookies: &CookieJar<'_>,
     conn: DbConn,
-    model: Form<RegisterFormModel>,
+    model: LenientForm<RegisterFormModel>,
 ) -> Result<Redirect, Flash<Redirect>> {
     match conn.run(move |c| user::add_user(&*model, &c)).await {
         Ok(model) => {
@@ -37,7 +37,7 @@ async fn register(
 async fn login(
     cookies: &CookieJar<'_>,
     conn: DbConn,
-    model: Form<LoginFormModel>,
+    model: LenientForm<LoginFormModel>,
 ) -> Result<Redirect, Flash<Redirect>> {
     match conn.run(move |c| user::login(&*model, &c)).await {
         Ok(model) => {

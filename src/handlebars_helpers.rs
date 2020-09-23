@@ -91,7 +91,8 @@ fn date_helper(
 ) -> HelperResult {
     let day = h.param(0).unwrap().value().as_u64().unwrap() as i32;
     let now = chrono::Utc::now().naive_local().date();
-    let day_duration = chrono::Duration::from_std(std::time::Duration::from_secs(60 * 60 * 24)).unwrap();
+    let day_duration =
+        chrono::Duration::from_std(std::time::Duration::from_secs(60 * 60 * 24)).unwrap();
 
     out.write(&format!("{}", now + day_duration * day))?;
     Ok(())

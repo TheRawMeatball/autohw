@@ -1,16 +1,17 @@
 use crate::pub_imports::*;
 use actions::homework::{self, HomeworkApiError};
 use models::homework::*;
+use models::hw_progress::*;
 use rocket::response::{Flash, Redirect};
 
 pub fn routes() -> Vec<rocket::Route> {
-    routes![add].set_root("/homework")
+    routes![add, progress].set_root("/homework")
 }
 
 #[post("/add", data = "<model>")]
 async fn add(
     user: AuthUser,
-    model: Form<AddHomeworkModel>,
+    model: LenientForm<AddHomeworkModel>,
     conn: DbConn,
 ) -> Result<Redirect, Flash<Redirect>> {
     match conn
@@ -19,9 +20,27 @@ async fn add(
     {
         Ok(_) => Ok(Redirect::to("/")),
         Err(HomeworkApiError::UnspecifiedTime) => Err(Flash::error(
-            Redirect::to("/"),
+            Redirect::to("/add"),
             "Specify due date or set as repeating",
         )),
-        Err(_) => Err(Flash::error(Redirect::to("/"), "Server error")),
+        Err(_) => Err(Flash::error(Redirect::to("/add"), "Server error")),
+    }
+}
+
+#[post("/progress", data = "<model>")]
+async fn progress(
+    user: AuthUser,
+    model: LenientForm<ChangeProgressModel>,
+    conn: DbConn,
+) -> Result<Redirect, Flash<Redirect>> {
+    match conn
+        .run(move |c| homework::change_progress(&user.into(), &*model, c))
+        .await
+    {
+        Ok(_) => Ok(Redirect::to("/")),
+        Err(e) => {
+            eprintln!("{}", e);
+            Err(Flash::error(Redirect::to("/"), "Server error"))
+        }
     }
 }

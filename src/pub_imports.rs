@@ -6,4 +6,4 @@ pub(crate) use crate::wrapper_types::*;
 pub(crate) use crate::DbConn;
 
 pub use rocket::http::CookieJar;
-pub use rocket::request::Form;
+pub use rocket::request::LenientForm;

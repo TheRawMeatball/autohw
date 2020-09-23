@@ -4,32 +4,32 @@ use crate::models::homework::*;
 use crate::pub_imports::*;
 use chrono::{Datelike, Duration, NaiveDate, Utc};
 use diesel::{prelude::*, PgConnection};
-use models::{hw_progress::HWProgressModel, user::User};
+use models::{hw_progress::*, user::User};
 use num_traits::FromPrimitive;
 
 pub fn change_progress(
     user: &User,
-    amount: i16,
-    id: i32,
-    use_delta: bool,
+    change_model: &ChangeProgressModel,
     conn: &PgConnection,
 ) -> Result<(), HomeworkApiError> {
     use schema::hw_progress::dsl::*;
 
     let mut model: HWProgressModel = hw_progress
-        .filter(homework_id.eq(id).and(user_id.eq(user.id)))
+        .filter(user_id.eq(user.id).and(homework_id.eq(change_model.id)))
         .first(conn)
-        .map_err(|e| HomeworkApiError::DieselError(e))?;
+        .optional()
+        .map_err(|e| HomeworkApiError::DieselError(e))?
+        .unwrap();
 
-    if use_delta {
-        model.delta += amount;
+    if change_model.use_delta {
+        model.delta += change_model.amount;
         if model.delta_date != now() {
             model.progress += model.delta;
             model.delta = 0;
             model.delta_date = now();
         }
     } else {
-        model.progress += amount;
+        model.progress += change_model.amount;
     }
 
     model
@@ -124,13 +124,11 @@ pub fn get_homework_for_user(
 
     let result = {
         use schema::homework::dsl::*;
-
         source
             .filter(
-                user_id
-                    .eq(user.id)
-                    .or(class_id.eq(user.class_id))
-                    .and(due_date.gt(now)),
+                (user_id.eq(user.id).or(class_id.eq(user.class_id)))
+                    .and(due_date.gt(now).or(due_date.is_null()))
+                    .and(schema::hw_progress::user_id.eq(user.id)),
             )
             .select((
                 id,
@@ -178,7 +176,10 @@ impl HwModel {
     }
 }
 
-pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16; 7]) -> Vec<(i32, Vec<DailyHomework>)> {
+pub fn create_schedule(
+    all: &Vec<UserHomework>,
+    weights: &[i16; 7],
+) -> Vec<(i32, Vec<DailyHomework>)> {
     let now = now();
 
     let last_date = all
@@ -253,7 +254,12 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16; 7]) -> Vec<(i32,
     let mut workload = vec![0i16; last_day as usize];
     let mut work_split: Vec<_> = (0..last_day as i32)
         .into_iter()
-        .map(|day| (weights[(now + one_day * day).weekday().num_days_from_monday() as usize], 0))
+        .map(|day| {
+            (
+                weights[(now + one_day * day).weekday().num_days_from_monday() as usize],
+                0,
+            )
+        })
         .collect();
 
     for hw in all.iter() {
@@ -262,7 +268,7 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16; 7]) -> Vec<(i32,
 
     all.sort_by_key(|x| x.due);
 
-    create_work_split(workload,  &mut work_split[..]);
+    create_work_split(workload, &mut work_split[..]);
 
     work_split
         .iter()
@@ -271,6 +277,10 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16; 7]) -> Vec<(i32,
             let mut load = *load;
             let mut for_today = vec![];
             while load > 0 {
+                if day != 0 {
+                    all[0].hw.delta = 0;
+                }
+
                 if all[0].left() > load {
                     for_today.push(DailyHomework {
                         hw: all[0].hw.clone(),
@@ -290,10 +300,11 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16; 7]) -> Vec<(i32,
             }
             v.push((day as i32, for_today));
             (all, v)
-        }).1
+        })
+        .1
 }
 
-fn create_work_split(workload: Vec<i16>, work_split: &mut[(i16, i16)]) {
+fn create_work_split(workload: Vec<i16>, work_split: &mut [(i16, i16)]) {
     let last_day = workload.len();
 
     for day in 0..last_day {

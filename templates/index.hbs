@@ -42,13 +42,41 @@
 					{{hw.delta}} test bitti, {{sub amount hw.delta}} test kaldı.
 				{{/if}}
 			</p>
-			<div class="progress mb-2">
-			    <div class="progress-bar" role="progressbar" style="width: {{percent hw.progress hw.amount}}%"></div>
-			    <div class="progress-bar bg-success" role="progressbar" style="width: {{percent hw.delta hw.amount}}%"></div>
-			    <div class="progress-bar bg-warning" role="progressbar" style="width: {{percent (sub amount hw.delta) hw.amount}}%"></div>
+			<div class="row mb-2">
+				<div class="col">
+					<div class="progress">
+					    <div class="progress-bar" role="progressbar" style="width: {{percent hw.progress hw.amount}}%"></div>
+					    <div class="progress-bar bg-success" role="progressbar" style="width: {{percent hw.delta hw.amount}}%"></div>
+					    <div class="progress-bar bg-warning" role="progressbar" style="width: {{percent (sub amount hw.delta) hw.amount}}%"></div>
+					</div>
+				</div>
 			</div>
-			<button class="btn bg-primary">Günü bitir</button>
-			<button class="btn bg-primary">Ekle</button>
+			<div class="row">
+				<div class="col-auto" style="padding-right: 0;">
+					<form method="POST" action="/api/homework/progress">
+						<input type="hidden" name="amount" value="{{sub amount hw.delta}}">
+						<input type="hidden" name="use_delta" value="true">
+						<input type="hidden" name="id" value="{{hw.db_id}}">
+						<button class="btn bg-primary">Günü bitir</button>
+					</form>
+				</div>
+				<div class="col-auto" style="padding-right: 0;">
+					<form method="POST" action="/api/homework/progress">
+						<input type="hidden" name="amount" value="1">
+						<input type="hidden" name="use_delta" value="true">
+						<input type="hidden" name="id" value="{{hw.db_id}}">
+						<button class="btn bg-primary">Bir test bitir</button>
+					</form>
+				</div>
+				<div class="col-auto" style="padding-right: 0;">
+					<form method="POST" action="/api/homework/progress">
+						<input type="hidden" name="amount" value="-1">
+						<input type="hidden" name="use_delta" value="true">
+						<input type="hidden" name="id" value="{{hw.db_id}}">
+						<button class="btn bg-primary">Bir test ekle</button>
+					</form>
+				</div>
+			</div>
 		{{/hwBase}}
 	{{/if}}
 {{/inline}}
