@@ -21,7 +21,8 @@
 		<div class="col-lg">
 			<h2 class="text-center">Plan</h2>
 			{{#each all}}
-				{{#each this}}
+				{{date this.0}}
+				{{#each this.1}}
 					{{> hwPlan}}
 				{{/each}}
 				<div class="dropdown-divider"></div>

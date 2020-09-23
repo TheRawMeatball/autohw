@@ -178,7 +178,7 @@ impl HwModel {
     }
 }
 
-pub fn create_schedule(all: &Vec<UserHomework>) -> Vec<Vec<DailyHomework>> {
+pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16; 7]) -> Vec<(i32, Vec<DailyHomework>)> {
     let now = now();
 
     let last_date = all
@@ -248,7 +248,13 @@ pub fn create_schedule(all: &Vec<UserHomework>) -> Vec<Vec<DailyHomework>> {
         .flatten()
         .collect();
 
-    let mut workload: Vec<i16> = vec![0; last_day as usize];
+    let one_day = Duration::from_std(time::Duration::from_secs(60 * 60 * 24)).unwrap();
+
+    let mut workload = vec![0i16; last_day as usize];
+    let mut work_split: Vec<_> = (0..last_day as i32)
+        .into_iter()
+        .map(|day| (weights[(now + one_day * day).weekday().num_days_from_monday() as usize], 0))
+        .collect();
 
     for hw in all.iter() {
         workload[hw.due as usize] += hw.hw.amount - hw.hw.progress;
@@ -256,63 +262,69 @@ pub fn create_schedule(all: &Vec<UserHomework>) -> Vec<Vec<DailyHomework>> {
 
     all.sort_by_key(|x| x.due);
 
-    let result =
-        create_work_split(workload)
-            .iter()
-            .fold((all, vec![]), |(mut all, mut v), load| {
-                let mut load = *load;
-                let mut for_today = vec![];
-                while load > 0 {
-                    if all[0].left() > load {
-                        for_today.push(DailyHomework {
-                            hw: all[0].hw.clone(),
-                            amount: load as i32,
-                        });
-                        all[0].hw.progress += load;
-                        load = 0; // break;
-                    } else {
-                        let hw = all.remove(0);
-                        let left = hw.left();
-                        for_today.push(DailyHomework {
-                            hw: hw.hw,
-                            amount: left as i32,
-                        });
-                        load -= left;
-                    }
-                }
-                v.push(for_today);
-                (all, v)
-            });
+    create_work_split(workload,  &mut work_split[..]);
 
-    result.1
+    work_split
+        .iter()
+        .enumerate()
+        .fold((all, vec![]), |(mut all, mut v), (day, (_, load))| {
+            let mut load = *load;
+            let mut for_today = vec![];
+            while load > 0 {
+                if all[0].left() > load {
+                    for_today.push(DailyHomework {
+                        hw: all[0].hw.clone(),
+                        amount: load as i32,
+                    });
+                    all[0].hw.progress += load;
+                    load = 0; // break;
+                } else {
+                    let hw = all.remove(0);
+                    let left = hw.left();
+                    for_today.push(DailyHomework {
+                        hw: hw.hw,
+                        amount: left as i32,
+                    });
+                    load -= left;
+                }
+            }
+            v.push((day as i32, for_today));
+            (all, v)
+        }).1
 }
 
-fn create_work_split(workload: Vec<i16>) -> Vec<i16> {
+fn create_work_split(workload: Vec<i16>, work_split: &mut[(i16, i16)]) {
     let last_day = workload.len();
-    let mut work_split: Vec<i16> = vec![0; last_day as usize];
 
     for day in 0..last_day {
         for start in 0..=day {
             let slice = &mut work_split[start as usize..=day as usize];
-            let sum = slice.iter().sum::<i16>() as usize + workload[day as usize] as usize;
-            let avg = sum as f32 / slice.len() as f32;
-            if avg > *slice.iter().max().unwrap() as f32 {
+            let counts = || slice.iter().map(|(_, c)| c);
+            let effective_len = slice.iter().map(|(w, _)| w).sum::<i16>();
+            let sum = counts().sum::<i16>() + workload[day as usize];
+            let avg = sum as f32 / effective_len as f32;
+            if avg > *counts().max().unwrap() as f32 {
                 let added = avg.floor() as i16;
 
                 for load in slice.iter_mut() {
-                    *load = added;
+                    load.1 = added * load.0;
                 }
 
-                for i in 0..(sum % slice.len()) {
-                    slice[i] += 1;
+                let mut excess = sum % effective_len;
+
+                for i in 0.. {
+                    let load = excess.min(slice[i].0);
+                    slice[i].1 += load;
+                    excess -= load;
+                    if excess == 0 {
+                        break;
+                    }
                 }
 
                 break;
             }
         }
     }
-
-    work_split
 }
 
 #[derive(Debug)]

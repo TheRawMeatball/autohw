@@ -10,6 +10,7 @@ pub fn helpers() -> impl Fairing {
         hb.register_helper("percent", Box::new(percent_helper));
         hb.register_helper("dueDate", Box::new(due_date_helper));
         hb.register_helper("sub", Box::new(sub_helper));
+        hb.register_helper("date", Box::new(date_helper));
     })
 }
 
@@ -78,5 +79,20 @@ fn due_date_helper(
         }
     }
 
+    Ok(())
+}
+
+fn date_helper(
+    h: &Helper<'_, '_>,
+    _: &Handlebars,
+    _: &Context,
+    _: &mut RenderContext<'_, '_>,
+    out: &mut dyn Output,
+) -> HelperResult {
+    let day = h.param(0).unwrap().value().as_u64().unwrap() as i32;
+    let now = chrono::Utc::now().naive_local().date();
+    let day_duration = chrono::Duration::from_std(std::time::Duration::from_secs(60 * 60 * 24)).unwrap();
+
+    out.write(&format!("{}", now + day_duration * day))?;
     Ok(())
 }
