@@ -9,6 +9,14 @@ pub struct RegisterFormModel {
     pub class_name: String,
 }
 
+#[derive(FromForm, Debug)]
+pub struct ChangeFormModel {
+    pub name: String,
+    pub password: String,
+    pub confirm_password: String,
+    pub class_name: String,
+}
+
 #[derive(FromForm)]
 pub struct LoginFormModel {
     pub name: String,
@@ -23,7 +31,7 @@ pub struct NewUserModel<'a> {
     pub class_id: Option<i32>,
 }
 
-#[derive(Identifiable, Queryable)]
+#[derive(Identifiable, Queryable, AsChangeset)]
 #[table_name = "users"]
 pub struct DbUserModel {
     pub id: i32,
@@ -32,7 +40,7 @@ pub struct DbUserModel {
     pub class_id: Option<i32>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct User {
     pub name: String,
     pub id: i32,

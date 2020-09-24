@@ -2,6 +2,51 @@ use crate::models::user::*;
 use crate::pub_imports::*;
 use diesel::{prelude::*, PgConnection};
 
+pub fn change_settings(
+    model: &ChangeFormModel,
+    user: &User,
+    conn: &PgConnection,
+) -> Result<DbUserModel, UserApiError> {
+    use schema::users::dsl::*;
+
+    if model.name.len() < 4 {
+        return Err(UserApiError::UsernameTooShort);
+    } else if model.password != model.confirm_password {
+        return Err(UserApiError::MismatchedPasswords);
+    } else if model.password.len() < 6 && model.password.len() != 0 {
+        return Err(UserApiError::PasswordTooShort);
+    } else if users
+        .select(diesel::dsl::count(id))
+        .filter(name.eq(model.name.clone()).and(id.ne(user.id)))
+        .first::<i64>(conn)
+        .map_err(|e| UserApiError::DieselError(e))?
+        > 0
+    {
+        return Err(UserApiError::UserExists);
+    }
+
+    let mut db_model = users
+        .filter(id.eq(user.id))
+        .first::<DbUserModel>(conn)
+        .map_err(|e| UserApiError::DieselError(e))?;
+
+    db_model.name = model.name.clone();
+
+    if model.password != "" {
+        db_model.pwhs = bcrypt::hash(&model.password, bcrypt::DEFAULT_COST).unwrap();
+    }
+
+    db_model.class_id = Some(
+        *actions::class::get_or_make_class(&model.class_name, conn)
+            .unwrap()
+            .id(),
+    );
+
+    db_model
+        .save_changes::<DbUserModel>(conn)
+        .map_err(|e| UserApiError::DieselError(e))
+}
+
 pub fn add_user(
     model: &RegisterFormModel,
     conn: &PgConnection,

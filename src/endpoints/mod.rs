@@ -6,20 +6,41 @@ use rocket_contrib::templates::Template;
 mod api;
 
 pub fn routes() -> Vec<rocket::Route> {
-    api::routes().add(routes![index, login, add_homework])
+    api::routes().add(routes![index, login, add_homework, settings])
+}
+
+#[get("/settings")]
+fn settings(user: AuthUser, flash: Option<FlashMessage>) -> Template {
+    let data = if let Some(msg) = flash {
+        let msg = msg.msg();
+        json!({
+            "title": "Settings",
+            "flash": msg,
+            "user": user,
+        })
+    } else {
+        json!({
+            "title": "Settings",
+            "user": user,
+        })
+    };
+
+    Template::render("settings", &data)
 }
 
 #[get("/add")]
-fn add_homework(_user: AuthUser, flash: Option<FlashMessage>) -> Template {
+fn add_homework(user: AuthUser, flash: Option<FlashMessage>) -> Template {
     let data = if let Some(msg) = flash {
         let msg = msg.msg();
         json!({
             "title": "Add Homework",
             "flash": msg,
+            "user": user,
         })
     } else {
         json!({
-            "title": "Add Homework"
+            "title": "Add Homework",
+            "user": user,
         })
     };
 
