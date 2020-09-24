@@ -145,7 +145,7 @@ pub fn get_homework_for_user(
     };
 
     for hw in result.iter() {
-        if hw.delta_date != Utc::now().date().naive_local() {
+        if hw.delta_date != now {
             use schema::hw_progress::dsl::*;
             let mut x: HWProgressModel = hw_progress
                 .filter(homework_id.eq(hw.id))
