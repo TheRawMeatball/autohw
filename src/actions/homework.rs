@@ -249,29 +249,30 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Ve
     let one_day = Duration::from_std(time::Duration::from_secs(60 * 60 * 24)).unwrap();
 
     let mut workload = vec![0i16; last_day as usize];
-    let mut work_split: Vec<_> = (0..last_day as i32)
-        .into_iter()
-        .map(|day| {
-            (
-                weights[(now + one_day * day).weekday().num_days_from_monday() as usize],
-                0,
-            )
-        })
-        .collect();
 
     for hw in all.iter() {
         workload[hw.due as usize] += hw.hw.amount - hw.hw.progress;
     }
 
+    let mut work_split: Vec<_> = (0..last_day as i32)
+        .into_iter()
+        .map(|day| {
+            (
+                weights[(now + one_day * day).weekday().num_days_from_monday() as usize] as i32,
+                workload[day as usize] as i32,
+            )
+        })
+        .collect();
+
     all.sort_by_key(|x| x.due);
 
-    create_work_split(workload, &mut work_split[..]);
+    distribute(&mut work_split);
 
     work_split
         .iter()
+        .map(|&(w, l)| (w as i16, l as i16))
         .enumerate()
-        .fold((all, vec![]), |(mut all, mut v), (day, (_, load))| {
-            let mut load = *load;
+        .fold((all, vec![]), |(mut all, mut v), (day, (_, mut load))| {
             let mut for_today = vec![];
             while load > 0 {
                 if day != 0 {
@@ -301,35 +302,39 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Ve
         .1
 }
 
-fn create_work_split(workload: Vec<i16>, work_split: &mut [(i16, i16)]) {
-    let last_day = workload.len();
+/// In the tuple, first element is weight for x, and second is the amount of homework due x+1.
+/// Once the function returns, the weights will not be altered, but, the second will be the amount
+/// of homework that should be done on day x.
+fn distribute(work: &mut [(i32, i32)]) {
+    for day in 0..work.len() {
+        let day_load = work[day].1;
+        work[day].1 = 0;
+        'day_loop: for start in 0..=day {
+            let slice = &mut work[start..=day];
+            for partial in 0..slice[0].0 {
+                let ws = slice[0];
+                let partial_load =
+                    (ws.0 - partial) * (ws.1 / ws.0) + ((ws.1 % ws.0) - partial).max(0);
 
-    for day in 0..last_day {
-        for start in 0..=day {
-            let slice = &mut work_split[start as usize..=day as usize];
-            let counts = || slice.iter().map(|(_, c)| c);
-            let effective_len = slice.iter().map(|(w, _)| w).sum::<i16>();
-            let sum = counts().sum::<i16>() + workload[day as usize];
-            let avg = sum as f32 / effective_len as f32;
-            if avg > *counts().max().unwrap() as f32 {
-                let added = avg.floor() as i16;
+                let load = day_load + partial_load + slice[1..].iter().map(|x| x.1).sum::<i32>();
+                let effective_len = slice.iter().map(|x| x.0).sum::<i32>() - partial;
+                let max = slice[1..]
+                    .iter()
+                    .map(|(w, l)| l / w + (l % w).min(1))
+                    .max()
+                    .unwrap_or(0)
+                    .max(partial_load);
 
-                for load in slice.iter_mut() {
-                    load.1 = added * load.0;
-                }
-
-                let mut excess = sum % effective_len;
-
-                for i in 0.. {
-                    let load = excess.min(slice[i].0);
-                    slice[i].1 += load;
-                    excess -= load;
-                    if excess == 0 {
-                        break;
+                if load / effective_len >= max {
+                    for x in slice.iter_mut() {
+                        x.1 = x.0 * (load / effective_len);
                     }
-                }
 
-                break;
+                    for x in slice.iter_mut().take((load % effective_len) as usize) {
+                        x.1 += 1;
+                    }
+                    break 'day_loop;
+                }
             }
         }
     }
