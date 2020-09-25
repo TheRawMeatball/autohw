@@ -61,7 +61,10 @@ fn add_homework(user: AuthUser, flash: Option<FlashMessage>) -> Template {
 async fn index(user: AuthUser, conn: DbConn) -> Template {
     let u = User::from(user).clone();
     let u2 = u.clone();
+    let u3 = u.clone();
     let uid = u.id;
+
+    conn.run(move |c| actions::homework::build_progress_table(&u3, c)).await.unwrap();
 
     let hw = conn
         .run(move |c| actions::homework::get_homework_for_user(&u, c))
