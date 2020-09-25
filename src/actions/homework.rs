@@ -115,6 +115,60 @@ pub fn add_homework(
     Ok(())
 }
 
+pub fn build_progress_table(user: &User, conn: &PgConnection) -> Result<(), HomeworkApiError> {
+    let now = now();
+
+    let user_hw = {
+        use schema::homework::dsl::*;
+
+        homework
+            .filter(user_id.eq(user.id).or(class_id.eq(user.class_id)))
+            .load::<DbHomeworkModel>(conn)
+            .map_err(|e| HomeworkApiError::DieselError(e))?
+    };
+
+    let user_progress = {
+        use schema::hw_progress::dsl::*;
+
+        hw_progress
+            .filter(user_id.eq(user.id))
+            .load::<HWProgressModel>(conn)
+            .map_err(|e| HomeworkApiError::DieselError(e))?
+    };
+
+    let inserts: Vec<_> = user_hw
+        .iter()
+        .filter_map(|hw: &DbHomeworkModel| {
+            if user_progress
+                .iter()
+                .find(|&x| x.user_id == user.id && x.homework_id == hw.id)
+                .is_some()
+            {
+                None
+            } else {
+                Some(HWProgressModel {
+                    delta: 0,
+                    delta_date: now,
+                    homework_id: hw.id,
+                    progress: 0,
+                    user_id: user.id,
+                })
+            }
+        })
+        .collect();
+
+    {
+        use schema::hw_progress::dsl::*;
+
+        diesel::insert_into(hw_progress)
+            .values(inserts)
+            .execute(conn)
+            .map_err(|e| HomeworkApiError::DieselError(e))?;
+    }
+
+    Ok(())
+}
+
 pub fn get_homework_for_user(
     user: &User,
     conn: &PgConnection,
