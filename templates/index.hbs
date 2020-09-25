@@ -108,6 +108,24 @@
 		    {{dueDate due_date}} {{amount}} test var,
 			{{progress}} test yapıldı.
 		</p>
+		<div class="row">
+			<div class="col-auto" style="padding-right: 0;">
+				<form method="POST" action="/api/homework/progress">
+					<input type="hidden" name="amount" value="1">
+					<input type="hidden" name="use_delta" value="false">
+					<input type="hidden" name="id" value="{{db_id}}">
+					<button class="btn bg-primary">Bir test bitir</button>
+				</form>
+			</div>
+			<div class="col-auto" style="padding-right: 0;">
+				<form method="POST" action="/api/homework/progress">
+					<input type="hidden" name="amount" value="-1">
+					<input type="hidden" name="use_delta" value="false">
+					<input type="hidden" name="id" value="{{db_id}}">
+					<button class="btn bg-primary">Bir test ekle</button>
+				</form>
+			</div>
+		</div>
 	{{/hwBase}}
 {{/inline}}
 
