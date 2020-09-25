@@ -110,6 +110,16 @@ pub fn login(model: &LoginFormModel, conn: &PgConnection) -> Result<DbUserModel,
     }
 }
 
+pub fn get_user_by_id(get_id: i32, conn: &PgConnection) -> Result<Option<DbUserModel>, UserApiError> {
+    use schema::users::dsl::*;
+
+    users
+        .filter(id.eq(get_id))
+        .first::<DbUserModel>(conn)
+        .optional()
+        .map_err(|e| UserApiError::DieselError(e))
+}
+
 #[derive(Debug)]
 pub enum UserApiError {
     UserExists,
