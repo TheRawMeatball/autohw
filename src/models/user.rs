@@ -38,6 +38,7 @@ pub struct DbUserModel {
     pub name: String,
     pub pwhs: String,
     pub class_id: Option<i32>,
+    pub day_weights: Vec<i32>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

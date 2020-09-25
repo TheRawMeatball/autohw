@@ -51,13 +51,16 @@ fn add_homework(user: AuthUser, flash: Option<FlashMessage>) -> Template {
 async fn index(user: AuthUser, conn: DbConn) -> Template {
     let u = User::from(user).clone();
     let u2 = u.clone();
+    let uid = u.id;
 
     let hw = conn
         .run(move |c| actions::homework::get_homework_for_user(&u, c))
         .await
         .unwrap();
 
-    let schedule = actions::homework::create_schedule(&hw, &[1, 1, 1, 1, 1, /*WEEKEND*/ 1, 1]);
+    let weights = conn.run(move |c| actions::user::get_user_by_id(uid, c)).await.unwrap().unwrap().day_weights;
+
+    let schedule = actions::homework::create_schedule(&hw, &weights);
 
     let data = json!({
         "user": u2,
