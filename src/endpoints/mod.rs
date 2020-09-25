@@ -10,18 +10,28 @@ pub fn routes() -> Vec<rocket::Route> {
 }
 
 #[get("/settings")]
-fn settings(user: AuthUser, flash: Option<FlashMessage>) -> Template {
+async fn settings(user: AuthUser, conn: DbConn, flash: Option<FlashMessage<'_, '_>>) -> Template {
+    let uid = user.id;
+    let weights = conn
+        .run(move |c| actions::user::get_user_by_id(uid, c))
+        .await
+        .unwrap()
+        .unwrap()
+        .day_weights;
+
     let data = if let Some(msg) = flash {
         let msg = msg.msg();
         json!({
             "title": "Settings",
             "flash": msg,
             "user": user,
+            "weights": weights,
         })
     } else {
         json!({
             "title": "Settings",
             "user": user,
+            "weights": weights,
         })
     };
 
@@ -58,9 +68,17 @@ async fn index(user: AuthUser, conn: DbConn) -> Template {
         .await
         .unwrap();
 
-    let weights = conn.run(move |c| actions::user::get_user_by_id(uid, c)).await.unwrap().unwrap().day_weights;
+    let weights: Vec<_> = conn
+        .run(move |c| actions::user::get_user_by_id(uid, c))
+        .await
+        .unwrap()
+        .unwrap()
+        .day_weights
+        .into_iter()
+        .map(|x| x as i16)
+        .collect();
 
-    let schedule = actions::homework::create_schedule(&hw, &weights);
+    let schedule = actions::homework::create_schedule(&hw, &weights[0..7]);
 
     let data = json!({
         "user": u2,

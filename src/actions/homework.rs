@@ -176,10 +176,7 @@ impl HwModel {
     }
 }
 
-pub fn create_schedule(
-    all: &Vec<UserHomework>,
-    weights: &[i16; 7],
-) -> Vec<(i32, Vec<DailyHomework>)> {
+pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Vec<DailyHomework>)> {
     let now = now();
 
     let last_date = all

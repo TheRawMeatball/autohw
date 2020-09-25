@@ -15,6 +15,21 @@ pub struct ChangeFormModel {
     pub password: String,
     pub confirm_password: String,
     pub class_name: String,
+    mo: u32,
+    tu: u32,
+    we: u32,
+    th: u32,
+    fr: u32,
+    sa: u32,
+    su: u32,
+}
+
+impl ChangeFormModel {
+    pub fn weights(&self) -> Vec<u32> {
+        vec![
+            self.mo, self.tu, self.we, self.th, self.fr, self.sa, self.su,
+        ]
+    }
 }
 
 #[derive(FromForm)]

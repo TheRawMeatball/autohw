@@ -42,6 +42,8 @@ pub fn change_settings(
             .id(),
     );
 
+    db_model.day_weights = model.weights().into_iter().map(|x| x as i32).collect();
+
     db_model
         .save_changes::<DbUserModel>(conn)
         .map_err(|e| UserApiError::DieselError(e))
@@ -110,7 +112,10 @@ pub fn login(model: &LoginFormModel, conn: &PgConnection) -> Result<DbUserModel,
     }
 }
 
-pub fn get_user_by_id(get_id: i32, conn: &PgConnection) -> Result<Option<DbUserModel>, UserApiError> {
+pub fn get_user_by_id(
+    get_id: i32,
+    conn: &PgConnection,
+) -> Result<Option<DbUserModel>, UserApiError> {
     use schema::users::dsl::*;
 
     users
