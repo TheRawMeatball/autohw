@@ -43,6 +43,7 @@ pub struct ProgressHomeworkModel {
     pub progress: i16,
     pub delta_progress: i16,
     pub delta_date: chrono::NaiveDate,
+    pub weight: i32,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -54,6 +55,7 @@ pub struct UserHomework {
     /// For `homework` table
     pub db_id: i32,
     pub delta: i16,
+    pub weight: i32,
 }
 
 #[derive(Serialize, Debug)]
@@ -80,6 +82,7 @@ impl From<ProgressHomeworkModel> for UserHomework {
                 Some(d) => DueDate::Date(d),
                 None => DueDate::Repeat(m.day_of_week.unwrap()),
             },
+            weight: m.weight,
         }
     }
 }

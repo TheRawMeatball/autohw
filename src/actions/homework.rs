@@ -83,6 +83,7 @@ pub fn add_homework(
             progress: 0,
             delta_date: now(),
             homework_id: hw_id,
+            weight: 1,
         }]
     } else {
         use schema::users::dsl::*;
@@ -99,6 +100,7 @@ pub fn add_homework(
                 progress: 0,
                 delta_date: now(),
                 homework_id: hw_id,
+                weight: 1
             })
             .collect()
     };
@@ -152,6 +154,7 @@ pub fn build_progress_table(user: &User, conn: &PgConnection) -> Result<(), Home
                     homework_id: hw.id,
                     progress: 0,
                     user_id: user.id,
+                    weight: 1,
                 })
             }
         })
@@ -193,6 +196,7 @@ pub fn get_homework_for_user(
                 schema::hw_progress::progress,
                 schema::hw_progress::delta,
                 schema::hw_progress::delta_date,
+                schema::hw_progress::weight,
             ))
             .load::<ProgressHomeworkModel>(conn)
             .map_err(|e| HomeworkApiError::DieselError(e))?
@@ -227,6 +231,10 @@ struct HwModel {
 impl HwModel {
     fn left(&self) -> i16 {
         self.hw.amount - self.hw.progress
+    }
+
+    fn eff_left(&self) -> i16 {
+        self.left() * self.hw.weight as i16
     }
 }
 
@@ -313,7 +321,7 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Ve
         .map(|day| {
             (
                 weights[(now + one_day * day).weekday().num_days_from_monday() as usize] as i32,
-                workload[day as usize] as i32,
+                workload[day as usize] as i32 * all[day as usize].hw.weight,
             )
         })
         .collect();
@@ -321,41 +329,49 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Ve
     all.sort_by_key(|x| x.due);
 
     distribute(&mut work_split);
-    assert_eq!(
-        work_split.iter().map(|&(_, l)| l).sum::<i32>(),
-        work_split.iter().map(|&(_, l)| l).sum::<i32>()
-    );
 
     work_split
         .iter()
         .map(|&(w, l)| (w as i16, l as i16))
         .enumerate()
-        .fold((all, vec![]), |(mut all, mut v), (day, (_, mut load))| {
+        .fold((all, vec![], 0), |(mut all, mut v, mut next_borrow), (day, (_, mut load))| {
             let mut for_today = vec![];
+
+            if next_borrow > load {
+                return (all, v, next_borrow - load);
+            } else {
+                load -= next_borrow;
+            }
+
             while load > 0 {
                 if day != 0 {
                     all[0].hw.delta = 0;
                 }
 
-                if all[0].left() > load {
+                if all[0].eff_left() > load {
+                    let div = all[0].left() / all[0].hw.weight as i16;
+                    let rem = all[0].left() % all[0].hw.weight as i16;
+                    let work = (div + rem.min(1)) as i32;
                     for_today.push(DailyHomework {
                         hw: all[0].hw.clone(),
-                        amount: load as i32,
+                        amount: work,
                     });
-                    all[0].hw.progress += load;
+                    all[0].hw.progress += work as i16;
+                    next_borrow = rem.min(1) * (all[0].hw.weight - rem as i32) as i16;
                     load = 0; // break;
                 } else {
                     let hw = all.remove(0);
                     let left = hw.left();
+                    let eleft = hw.eff_left();
                     for_today.push(DailyHomework {
                         hw: hw.hw,
                         amount: left as i32,
                     });
-                    load -= left;
+                    load -= eleft;
                 }
             }
             v.push((day as i32, for_today));
-            (all, v)
+            (all, v, next_borrow)
         })
         .1
 }

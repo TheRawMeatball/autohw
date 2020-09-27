@@ -10,6 +10,7 @@ pub struct HWProgressModel {
     pub progress: i16,
     pub delta: i16,
     pub delta_date: chrono::NaiveDate,
+    pub weight: i32,
 }
 
 #[derive(FromForm)]
