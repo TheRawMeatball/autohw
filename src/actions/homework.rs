@@ -349,8 +349,8 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Ve
                 }
 
                 if all[0].eff_left() > load {
-                    let div = all[0].left() / all[0].hw.weight as i16;
-                    let rem = all[0].left() % all[0].hw.weight as i16;
+                    let div = load / all[0].hw.weight as i16;
+                    let rem = load % all[0].hw.weight as i16;
                     let work = (div + rem.min(1)) as i32;
                     for_today.push(DailyHomework {
                         hw: all[0].hw.clone(),
