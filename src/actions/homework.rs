@@ -2,7 +2,7 @@ use std::time;
 
 use crate::models::homework::*;
 use crate::pub_imports::*;
-use chrono::{Datelike, Duration, NaiveDate, Utc};
+use chrono::{Datelike, Duration, NaiveDate};
 use diesel::{prelude::*, PgConnection};
 use models::{hw_progress::*, user::User};
 use num_traits::FromPrimitive;
@@ -22,12 +22,12 @@ pub fn change_progress(
         .unwrap();
 
     if change_model.use_delta {
-        model.delta += change_model.amount;
         if model.delta_date != now() {
             model.progress += model.delta;
             model.delta = 0;
             model.delta_date = now();
         }
+        model.delta += change_model.amount;
     } else {
         model.progress += change_model.amount;
     }
@@ -321,6 +321,10 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Ve
     all.sort_by_key(|x| x.due);
 
     distribute(&mut work_split);
+    assert_eq!(
+        work_split.iter().map(|&(_, l)| l).sum::<i32>(),
+        work_split.iter().map(|&(_, l)| l).sum::<i32>()
+    );
 
     work_split
         .iter()
@@ -374,19 +378,35 @@ fn distribute(work: &mut [(i32, i32)]) {
                 let effective_len = slice.iter().map(|x| x.0).sum::<i32>() - partial;
                 let max = slice[1..]
                     .iter()
-                    .map(|(w, l)| l / w + (l % w).min(1))
+                    .map(|&(w, l)| {
+                        if w == 0 {
+                            0
+                        } else {
+                            l / w + i32::min(l % w, 1)
+                        }
+                    })
                     .max()
                     .unwrap_or(0)
-                    .max(partial_load);
+                    .max((ws.1 / ws.0) + ((ws.1 % ws.0) - partial).max(0));
 
                 if load / effective_len >= max {
-                    for x in slice.iter_mut() {
+                    slice[0].1 += (load / effective_len) * (slice[0].0 - partial) - partial_load;
+
+                    for x in slice[1..].iter_mut() {
                         x.1 = x.0 * (load / effective_len);
                     }
 
+                    let mut excess = load % effective_len;
+
                     for x in slice.iter_mut().take((load % effective_len) as usize) {
-                        x.1 += 1;
+                        x.1 += x.0.min(excess);
+                        excess -= x.0.min(excess);
+
+                        if excess == 0 {
+                            break;
+                        }
                     }
+
                     break 'day_loop;
                 }
             }
@@ -410,9 +430,4 @@ impl From<diesel::result::Error> for HomeworkApiError {
     fn from(e: diesel::result::Error) -> Self {
         HomeworkApiError::DieselError(e)
     }
-}
-
-#[inline]
-fn now() -> NaiveDate {
-    Utc::now().date().naive_local()
 }

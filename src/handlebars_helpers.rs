@@ -1,4 +1,4 @@
-use crate::models::homework::DueDate;
+use crate::{models::homework::DueDate, pub_imports::*};
 use rocket::fairing::Fairing;
 use rocket_contrib::templates::{handlebars, Template};
 
@@ -90,7 +90,7 @@ fn date_helper(
     out: &mut dyn Output,
 ) -> HelperResult {
     let day = h.param(0).unwrap().value().as_u64().unwrap() as i32;
-    let now = chrono::Utc::now().naive_local().date();
+    let now = now();
     let day_duration =
         chrono::Duration::from_std(std::time::Duration::from_secs(60 * 60 * 24)).unwrap();
 

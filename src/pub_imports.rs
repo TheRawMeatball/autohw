@@ -7,3 +7,11 @@ pub(crate) use crate::DbConn;
 
 pub use rocket::http::CookieJar;
 pub use rocket::request::LenientForm;
+
+use chrono::{self, Duration, NaiveDate, Utc};
+#[inline]
+pub fn now() -> NaiveDate {
+    let now = Utc::now().naive_local() + Duration::seconds(3*3600);
+    println!("{}", now);
+    now.date()
+}
