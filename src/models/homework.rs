@@ -44,6 +44,7 @@ pub struct ProgressHomeworkModel {
     pub delta_progress: i16,
     pub delta_date: chrono::NaiveDate,
     pub weight: i32,
+    pub last_repeat_reset: Option<chrono::NaiveDate>,
 }
 
 #[derive(Serialize, Clone, Debug)]

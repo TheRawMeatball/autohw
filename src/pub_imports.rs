@@ -11,7 +11,7 @@ pub use rocket::request::LenientForm;
 use chrono::{self, Duration, NaiveDate, Utc};
 #[inline]
 pub fn now() -> NaiveDate {
-    let now = Utc::now().naive_local() - Duration::seconds(5*3600 + 1800);
+    let now = Utc::now().naive_local() - Duration::seconds(5 * 3600 + 1800);
     println!("{}", now);
     now.date()
 }

@@ -33,6 +33,7 @@ table! {
         delta -> Int2,
         delta_date -> Date,
         weight -> Int4,
+        last_repeat_reset -> Nullable<Date>,
     }
 }
 
@@ -53,10 +54,4 @@ joinable!(hw_progress -> homework (homework_id));
 joinable!(hw_progress -> users (user_id));
 joinable!(users -> classes (class_id));
 
-allow_tables_to_appear_in_same_query!(
-    cancels,
-    classes,
-    homework,
-    hw_progress,
-    users,
-);
+allow_tables_to_appear_in_same_query!(cancels, classes, homework, hw_progress, users,);

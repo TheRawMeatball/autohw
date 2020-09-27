@@ -84,6 +84,7 @@ pub fn add_homework(
             delta_date: now(),
             homework_id: hw_id,
             weight: 1,
+            last_repeat_reset: None,
         }]
     } else {
         use schema::users::dsl::*;
@@ -100,7 +101,8 @@ pub fn add_homework(
                 progress: 0,
                 delta_date: now(),
                 homework_id: hw_id,
-                weight: 1
+                weight: 1,
+                last_repeat_reset: None,
             })
             .collect()
     };
@@ -155,6 +157,7 @@ pub fn build_progress_table(user: &User, conn: &PgConnection) -> Result<(), Home
                     progress: 0,
                     user_id: user.id,
                     weight: 1,
+                    last_repeat_reset: None,
                 })
             }
         })
@@ -197,23 +200,37 @@ pub fn get_homework_for_user(
                 schema::hw_progress::delta,
                 schema::hw_progress::delta_date,
                 schema::hw_progress::weight,
+                schema::hw_progress::last_repeat_reset,
             ))
             .load::<ProgressHomeworkModel>(conn)
             .map_err(|e| HomeworkApiError::DieselError(e))?
     };
 
     for hw in result.iter() {
+        use schema::hw_progress::dsl::*;
+        let mut x: HWProgressModel = hw_progress
+            .filter(homework_id.eq(hw.id))
+            .first(conn)
+            .unwrap();
+
         if hw.delta_date != now {
-            use schema::hw_progress::dsl::*;
-            let mut x: HWProgressModel = hw_progress
-                .filter(homework_id.eq(hw.id))
-                .first(conn)
-                .unwrap();
             x.progress += x.delta;
             x.delta = 0;
             x.delta_date = now;
-            x.save_changes::<HWProgressModel>(conn).unwrap();
         }
+
+        if let Some(dow) = hw.day_of_week {
+            if now.weekday().num_days_from_monday() == dow as u32
+                && hw.last_repeat_reset != Some(now)
+            {
+                x.last_repeat_reset = Some(now);
+                if hw.progress - hw.amount >= 0 {
+                    x.progress -= hw.amount;
+                }
+            }
+        }
+
+        x.save_changes::<HWProgressModel>(conn).unwrap();
     }
 
     Ok(result
@@ -334,45 +351,48 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Ve
         .iter()
         .map(|&(w, l)| (w as i16, l as i16))
         .enumerate()
-        .fold((all, vec![], 0), |(mut all, mut v, mut next_borrow), (day, (_, mut load))| {
-            let mut for_today = vec![];
+        .fold(
+            (all, vec![], 0),
+            |(mut all, mut v, mut next_borrow), (day, (_, mut load))| {
+                let mut for_today = vec![];
 
-            if next_borrow > load {
-                return (all, v, next_borrow - load);
-            } else {
-                load -= next_borrow;
-            }
-
-            while load > 0 {
-                if day != 0 {
-                    all[0].hw.delta = 0;
-                }
-
-                if all[0].eff_left() > load {
-                    let div = load / all[0].hw.weight as i16;
-                    let rem = load % all[0].hw.weight as i16;
-                    let work = (div + rem.min(1)) as i32;
-                    for_today.push(DailyHomework {
-                        hw: all[0].hw.clone(),
-                        amount: work,
-                    });
-                    all[0].hw.progress += work as i16;
-                    next_borrow = rem.min(1) * (all[0].hw.weight - rem as i32) as i16;
-                    load = 0; // break;
+                if next_borrow > load {
+                    return (all, v, next_borrow - load);
                 } else {
-                    let hw = all.remove(0);
-                    let left = hw.left();
-                    let eleft = hw.eff_left();
-                    for_today.push(DailyHomework {
-                        hw: hw.hw,
-                        amount: left as i32,
-                    });
-                    load -= eleft;
+                    load -= next_borrow;
                 }
-            }
-            v.push((day as i32, for_today));
-            (all, v, next_borrow)
-        })
+
+                while load > 0 {
+                    if day != 0 {
+                        all[0].hw.delta = 0;
+                    }
+
+                    if all[0].eff_left() > load {
+                        let div = load / all[0].hw.weight as i16;
+                        let rem = load % all[0].hw.weight as i16;
+                        let work = (div + rem.min(1)) as i32;
+                        for_today.push(DailyHomework {
+                            hw: all[0].hw.clone(),
+                            amount: work,
+                        });
+                        all[0].hw.progress += work as i16;
+                        next_borrow = rem.min(1) * (all[0].hw.weight - rem as i32) as i16;
+                        load = 0; // break;
+                    } else {
+                        let hw = all.remove(0);
+                        let left = hw.left();
+                        let eleft = hw.eff_left();
+                        for_today.push(DailyHomework {
+                            hw: hw.hw,
+                            amount: left as i32,
+                        });
+                        load -= eleft;
+                    }
+                }
+                v.push((day as i32, for_today));
+                (all, v, next_borrow)
+            },
+        )
         .1
 }
 
