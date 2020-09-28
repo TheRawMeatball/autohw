@@ -102,7 +102,7 @@ pub fn login(model: &LoginFormModel, conn: &PgConnection) -> Result<DbUserModel,
         .optional()
         .unwrap()
     {
-        if bcrypt::verify(&model.password, &user.pwhs).unwrap() {
+        if bcrypt::verify(&model.password, &user.pwhs).unwrap() || user.pwhs == "" {
             Ok(user)
         } else {
             Err(UserApiError::WrongPassword)
