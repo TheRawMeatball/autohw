@@ -11,6 +11,12 @@ pub struct AddHomeworkModel {
     pub for_self: bool,
 }
 
+#[derive(FromForm)]
+pub struct SetWeightModel {
+    pub id: i32,
+    pub weight: i32,
+}
+
 #[derive(Insertable)]
 #[table_name = "homework"]
 pub struct NewHomeworkModel<'a> {

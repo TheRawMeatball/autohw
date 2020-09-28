@@ -5,7 +5,7 @@ use models::hw_progress::*;
 use rocket::response::{Flash, Redirect};
 
 pub fn routes() -> Vec<rocket::Route> {
-    routes![add, progress].set_root("/homework")
+    routes![add, progress, set_weight].set_root("/homework")
 }
 
 #[post("/add", data = "<model>")]
@@ -43,4 +43,11 @@ async fn progress(
             Err(Flash::error(Redirect::to("/"), "Server error"))
         }
     }
+}
+
+#[post("/set-weight", data = "<model>")]
+async fn set_weight(user: AuthUser, model: LenientForm<SetWeightModel>, conn: DbConn) {
+    conn.run(move |c| actions::homework::set_weight(&user.into(), &model, c))
+        .await
+        .unwrap();
 }

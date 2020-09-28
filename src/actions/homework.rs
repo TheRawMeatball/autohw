@@ -38,6 +38,20 @@ pub fn change_progress(
         .map_err(|e| HomeworkApiError::DieselError(e))
 }
 
+pub fn set_weight(
+    user: &User,
+    change_model: &SetWeightModel,
+    conn: &PgConnection,
+) -> Result<(), HomeworkApiError> {
+    use schema::hw_progress::dsl::*;
+
+    diesel::update(hw_progress.filter(user_id.eq(user.id).and(homework_id.eq(change_model.id))))
+        .set(weight.eq(change_model.weight))
+        .execute(conn)
+        .map_err(|e| HomeworkApiError::DieselError(e))
+        .map(|_| ())
+}
+
 pub fn add_homework(
     model: &AddHomeworkModel,
     user: AuthUser,
@@ -394,6 +408,12 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Ve
             },
         )
         .1
+        .into_iter()
+        .map(|(due, mut vec)| {
+            vec.sort_by_key(|hw| hw.hw.db_id);
+            (due, vec)
+        })
+        .collect()
 }
 
 /// In the tuple, first element is weight for x, and second is the amount of homework due x+1.
