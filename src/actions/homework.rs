@@ -330,7 +330,7 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Ve
     let mut workload = vec![0i16; last_day as usize];
 
     for hw in all.iter() {
-        workload[hw.due as usize] += hw.hw.amount - hw.hw.progress;
+        workload[hw.due as usize] += (hw.hw.amount - hw.hw.progress) * hw.hw.weight as i16;
     }
 
     let mut work_split: Vec<_> = (0..last_day as i32)
@@ -338,7 +338,7 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Ve
         .map(|day| {
             (
                 weights[(now + one_day * day).weekday().num_days_from_monday() as usize] as i32,
-                workload[day as usize] as i32 * all[day as usize].hw.weight,
+                workload[day as usize] as i32,
             )
         })
         .collect();
