@@ -210,6 +210,7 @@ pub fn get_homework_for_user(
         use schema::hw_progress::dsl::*;
         let mut x: HWProgressModel = hw_progress
             .filter(homework_id.eq(hw.id))
+            .filter(user_id.eq(user.id))
             .first(conn)
             .unwrap();
 
