@@ -285,8 +285,8 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Ve
                 let mut progress = m.progress;
 
                 loop {
-                    if date < now {
-                        date = date + one_week;
+                    if date <= now {
+                        date += one_week;
                         continue;
                     }
 
