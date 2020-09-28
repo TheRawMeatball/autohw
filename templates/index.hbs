@@ -125,6 +125,15 @@
 					<button class="btn bg-primary">Bir test ekle</button>
 				</form>
 			</div>
+			<div class="col-auto" style="padding-right: 0;">
+				<form method="POST" action="/api/homework/set-weight">
+					<input type="hidden" name="id" value="{{db_id}}">
+					<div class="input-group">
+						<input type="number" class="form-control" name="weight" style="width: 4rem;" value="{{weight}}">
+						<button style="width: 8rem;" class="btn bg-primary form-control">Ağırlık değiştir</button>
+					</div>
+				</form>
+			</div>
 		</div>
 	{{/hwBase}}
 {{/inline}}

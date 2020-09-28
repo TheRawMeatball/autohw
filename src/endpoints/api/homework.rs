@@ -46,8 +46,10 @@ async fn progress(
 }
 
 #[post("/set-weight", data = "<model>")]
-async fn set_weight(user: AuthUser, model: LenientForm<SetWeightModel>, conn: DbConn) {
+async fn set_weight(user: AuthUser, model: LenientForm<SetWeightModel>, conn: DbConn) -> Redirect {
     conn.run(move |c| actions::homework::set_weight(&user.into(), &model, c))
         .await
         .unwrap();
+
+    Redirect::to("/")
 }
