@@ -6,7 +6,14 @@ pub struct RegisterFormModel {
     pub name: String,
     pub password: String,
     pub confirm_password: String,
-    pub class_name: String,
+    class: i32,
+    class_name: String,
+}
+
+impl RegisterFormModel {
+    pub fn cname(&self) -> String {
+        format!("{}-{}", self.class, self.class_name.clone())
+    }
 }
 
 #[derive(FromForm, Debug)]
@@ -14,7 +21,8 @@ pub struct ChangeFormModel {
     pub name: String,
     pub password: String,
     pub confirm_password: String,
-    pub class_name: String,
+    class: i32,
+    class_name: String,
     mo: u32,
     tu: u32,
     we: u32,
@@ -22,6 +30,12 @@ pub struct ChangeFormModel {
     fr: u32,
     sa: u32,
     su: u32,
+}
+
+impl ChangeFormModel {
+    pub fn cname(&self) -> String {
+        format!("{}-{}", self.class, self.class_name.clone())
+    }
 }
 
 impl ChangeFormModel {

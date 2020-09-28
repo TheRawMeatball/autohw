@@ -35,8 +35,13 @@
 				    <input type="password" class="form-control" name="confirm_password" id="register-password">
 			  	</div>
 				<div class="form-group">
-			    	<label for="register-password">Sınıf adı</label>
-				    <input type="text" class="form-control" name="class_name" id="register-password">
+					<div class="input-group">
+						<div style="width: 60%;" class="input-group-prepend">
+  						  	<span style="width: 100%;" class="input-group-text">Sınıf</span>
+  						</div>
+						<input type="number" class="form-control" name="class">
+				    	<input type="text" class="form-control" name="class_name">
+					</div>
 			  	</div>
 				<button type="submit" class="btn btn-primary">Hesap aç</button>
 			</form>

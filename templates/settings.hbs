@@ -7,15 +7,20 @@
     <div class="row">
         <div class="col-lg">
             <h1 class="text-center">Ayarlar</h1>
-            <form action="/api/user/update" method="post">
+            <form action="/api/user/update" method="post" autocomplete="off">
                 <div class="form-group">
     				<label for="name">Kullanıcı adı değiştir</label>
 					<input type="text" class="form-control" name="name" id="name" value="{{user.name}}">
   				</div>
 				<div class="form-group">
-				<label for="class-name">Sınıf değiştir</label>
-					<input type="text" class="form-control" name="class_name" id="class-name" value="{{user.class_name}}">
-  				</div>
+					<div class="input-group">
+						<div style="width: 60%;" class="input-group-prepend">
+  						  	<span style="width: 100%;" class="input-group-text">Sınıf</span>
+  						</div>
+						<input type="number" class="form-control" name="class">
+				    	<input type="text" class="form-control" name="class_name">
+					</div>
+				</div>
 				<div class="form-group">
 				    <label>Gün ağırlıkları</label>
 				    <div class="input-group">
@@ -30,7 +35,7 @@
 				</div>									  																		  
   				<div class="form-group">
     				<label for="login-password">Şifre değiştir</label>
-    				<input type="password" class="form-control" name="password" id="password">
+    				<input type="password" class="form-control" name="password" id="password" autocomplete="new-password">
 				   	<input type="password" class="form-control" name="confirm_password" id="repeat-password">
   				</div>
   				<button type="submit" class="btn btn-primary">Değiştir</button>

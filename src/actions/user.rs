@@ -37,7 +37,7 @@ pub fn change_settings(
     }
 
     db_model.class_id = Some(
-        *actions::class::get_or_make_class(&model.class_name, conn)
+        *actions::class::get_or_make_class(&model.cname(), conn)
             .unwrap()
             .id(),
     );
@@ -76,7 +76,7 @@ pub fn add_user(
             pwhs: &bcrypt::hash(&model.password, bcrypt::DEFAULT_COST).unwrap(),
             class_id: {
                 Some(
-                    super::class::get_or_make_class(&model.class_name, conn)
+                    super::class::get_or_make_class(&model.cname(), conn)
                         .unwrap()
                         .id,
                 )
