@@ -22,4 +22,4 @@ num-traits = "0.2"
 [dependencies.rocket_contrib]
 git = "https://github.com/SergioBenitez/Rocket"
 default-features = false
-features = ["handlebars_templates", "diesel_postgres_pool"]
+features = ["handlebars_templates", "diesel_postgres_pool", "serve"]
