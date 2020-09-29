@@ -104,7 +104,10 @@ async fn past_due(user: AuthUser, conn: DbConn) -> Template {
     let u2 = u.clone();
 
     let hw = conn
-        .run(move |c| actions::homework::get_late_homework(&u, c))
+        .run(move |c| {
+            actions::homework::delete_complete_hw(c);
+            actions::homework::get_late_homework(&u, c)
+        })
         .await
         .unwrap();
 

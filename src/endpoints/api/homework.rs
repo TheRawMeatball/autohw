@@ -35,14 +35,10 @@ async fn add(
 }
 
 #[get("/delete-old?<old>")]
-async fn delete_old_hw(
-    user: AuthUser,
-    conn: DbConn,
-    old: i32,
-) -> Redirect {
+async fn delete_old_hw(user: AuthUser, conn: DbConn, old: i32) -> Redirect {
     let uid = user.id;
     conn.run(move |c| actions::homework::delete_old_hw_for_user(uid, old, c))
-    .await;
+        .await;
 
     Redirect::to("/")
 }

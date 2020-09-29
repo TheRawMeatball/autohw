@@ -3,7 +3,7 @@ use std::time;
 use crate::models::homework::*;
 use crate::pub_imports::*;
 use chrono::{Datelike, Duration, NaiveDate};
-use diesel::{prelude::*, PgConnection};
+use diesel::{dsl::all, prelude::*, PgConnection};
 use models::{hw_progress::*, user::User};
 use num_traits::FromPrimitive;
 
@@ -525,18 +525,42 @@ pub fn get_late_homework(
 }
 
 pub fn delete_old_hw_for_user(uid: i32, old: i32, conn: &PgConnection) {
-    use diesel::prelude::*;
-
     use schema::hw_progress::dsl::*;
-    
+
     diesel::delete(hw_progress.filter(homework_id.eq(old).and(user_id.eq(uid))))
         .execute(conn)
         .unwrap();
-    
+
     {
         use schema::homework::dsl::*;
-        
-        diesel::delete(homework.filter(id.ne_all(hw_progress.select(homework_id))))
+
+        diesel::delete(homework.filter(id.ne(all(hw_progress.select(homework_id)))))
+            .execute(conn)
+            .unwrap();
+    }
+}
+
+pub fn delete_complete_hw(conn: &PgConnection) {
+    let now = now();
+
+    let query = format!(
+        r#"
+        delete from "hw_progress" where ("user_id", "homework_id") in (
+            select "hw_progress"."user_id", "hw_progress"."homework_id" FROM hw_progress
+            inner join "homework" on "homework"."id" = "hw_progress"."homework_id"
+            where ("homework"."amount" = "hw_progress"."progress") and ("homework"."due_date" <= '{}')
+        );
+        "#, now);
+
+    diesel::sql_query(query)
+        .execute(conn)
+        .unwrap();
+
+    {
+        use schema::homework::dsl::*;
+        use schema::hw_progress::dsl::*;
+
+        diesel::delete(homework.filter(id.ne(all(hw_progress.select(homework_id)))))
             .execute(conn)
             .unwrap();
     }
