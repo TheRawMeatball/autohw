@@ -4,22 +4,23 @@
     <span class="navbar-toggler-icon"></span>
   </button>
   
-  <div class="collapse navbar-collapse" id="navbarColor02">
+<div class="collapse navbar-collapse" id="navbarColor02">
+   {{#if user}}
     <ul class="navbar-nav mr-auto">
-      {{#if user}}
-        <li class="nav-item">
-          <a class="nav-link" href="/add">Ödev ekle</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/settings">Ayarlar</a>
-        </li>
-      {{/if}}
+      <li class="nav-item">
+        <a class="nav-link" href="/add">Ödev ekle</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/settings">Ayarlar</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/past-due">Tarihi geçenler</a>
+      </li>
     </ul>
-    {{#if user}}
       <span class="navbar-text">
         {{user.name}} / {{user.class_name}}
       </span>
       <a href="/api/user/logout" class="btn bg-secondary ml-2">Çıkış yap</a>
-    {{/if}}
-  </div>
+    </div>
+  {{/if}}
 </nav>

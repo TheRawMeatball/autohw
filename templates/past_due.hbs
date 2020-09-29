@@ -1,0 +1,37 @@
+{{#*inline "page"}}
+	<div class="row">
+		<div class="col-lg">
+			{{#each hw}}
+                {{> hw}}
+            {{/each}}
+		</div>
+	</div>
+{{/inline}}
+
+{{#*inline "hw"}}
+    <div class="card text-white bg-dark mb-3">
+    	<div class="card-body">
+            <div class="row">
+                <div class="col-lg">
+                    <h4 class="card-title">{{detail}}</h4>
+		            <p class="card-text">
+		                {{dueDate due_date}} {{amount}} test vardı,
+		            	{{progress}} test yetişti.
+		            </p>
+                </div>
+                <div class="col-lg">
+                    <div class="btn-toolbar float-right" role="toolbar" aria-label="Toolbar with button groups">
+                        <div class="btn-group mr-2" role="group">
+                            <a href="/api/homework/delete-old?old={{db_id}}" class="btn btn-primary">Unut</a>
+                        </div>
+                        <div class="btn-group mr-2" role="group">
+                            <a href="/add?detail={{urlencode detail}}%20(tamamla)&amount={{sub amount progress}}&weight={{weight}}&old={{db_id}}" class="btn btn-primary">Tamamla</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+	    </div>
+    </div> 
+{{/inline}}
+
+{{~> layout~}}

@@ -140,7 +140,7 @@ pub fn build_progress_table(user: &User, conn: &PgConnection) -> Result<(), Home
         use schema::homework::dsl::*;
 
         homework
-            .filter(user_id.eq(user.id).or(class_id.eq(user.class_id)))
+            .filter((user_id.eq(user.id).or(class_id.eq(user.class_id))).and(due_date.gt(now)))
             .load::<DbHomeworkModel>(conn)
             .map_err(|e| HomeworkApiError::DieselError(e))?
     };
@@ -468,6 +468,77 @@ fn distribute(work: &mut [(i32, i32)]) {
                 }
             }
         }
+    }
+}
+
+pub fn get_late_homework(
+    user: &User,
+    conn: &PgConnection,
+) -> Result<Vec<UserHomework>, HomeworkApiError> {
+    let source = schema::homework::table.inner_join(schema::hw_progress::table);
+    let now = now();
+
+    let result = {
+        use schema::homework::dsl::*;
+
+        source
+            .filter(
+                (user_id.eq(user.id).or(class_id.eq(user.class_id)))
+                    .and(due_date.le(now))
+                    .and(due_date.is_not_null())
+                    .and(schema::hw_progress::user_id.eq(user.id)),
+            )
+            .select((
+                id,
+                due_date,
+                detail,
+                amount,
+                day_of_week,
+                schema::hw_progress::progress,
+                schema::hw_progress::delta,
+                schema::hw_progress::delta_date,
+                schema::hw_progress::weight,
+                schema::hw_progress::last_repeat_reset,
+            ))
+            .load::<ProgressHomeworkModel>(conn)
+            .map_err(|e| HomeworkApiError::DieselError(e))?
+    };
+
+    for hw in result.iter() {
+        use schema::hw_progress::dsl::*;
+        let mut x: HWProgressModel = hw_progress
+            .filter(homework_id.eq(hw.id))
+            .filter(user_id.eq(user.id))
+            .first(conn)
+            .unwrap();
+
+        if hw.delta_date != now {
+            x.progress += x.delta;
+            x.delta = 0;
+            x.delta_date = now;
+        }
+
+        x.save_changes::<HWProgressModel>(conn).unwrap();
+    }
+
+    Ok(result.into_iter().map(|phm| phm.into()).collect())
+}
+
+pub fn delete_old_hw_for_user(uid: i32, old: i32, conn: &PgConnection) {
+    use diesel::prelude::*;
+
+    use schema::hw_progress::dsl::*;
+    
+    diesel::delete(hw_progress.filter(homework_id.eq(old).and(user_id.eq(uid))))
+        .execute(conn)
+        .unwrap();
+    
+    {
+        use schema::homework::dsl::*;
+        
+        diesel::delete(homework.filter(id.ne_all(hw_progress.select(homework_id))))
+            .execute(conn)
+            .unwrap();
     }
 }
 

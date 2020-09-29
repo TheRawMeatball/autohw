@@ -1,5 +1,5 @@
 use crate::{models::homework::DueDate, pub_imports::*};
-use rocket::fairing::Fairing;
+use rocket::{fairing::Fairing, http::uri::Uri};
 use rocket_contrib::templates::{handlebars, Template};
 
 use self::handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContext};
@@ -11,7 +11,23 @@ pub fn helpers() -> impl Fairing {
         hb.register_helper("dueDate", Box::new(due_date_helper));
         hb.register_helper("sub", Box::new(sub_helper));
         hb.register_helper("date", Box::new(date_helper));
+        hb.register_helper("urlencode", Box::new(urlencode_helper));
     })
+}
+
+fn urlencode_helper(
+    h: &Helper<'_, '_>,
+    _: &Handlebars,
+    _: &Context,
+    _: &mut RenderContext<'_, '_>,
+    out: &mut dyn Output,
+) -> HelperResult {
+    if let Some(val) = h.param(0) {
+        let val = val.value().as_str().unwrap_or_else(|| "");
+        out.write(&Uri::percent_encode(val))?;
+    }
+
+    Ok(())
 }
 
 fn percent_helper(

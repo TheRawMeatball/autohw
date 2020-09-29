@@ -6,7 +6,7 @@ use rocket_contrib::templates::Template;
 mod api;
 
 pub fn routes() -> Vec<rocket::Route> {
-    api::routes().add(routes![index, login, add_homework, settings])
+    api::routes().add(routes![index, login, add_homework, settings, past_due])
 }
 
 #[get("/settings")]
@@ -38,21 +38,23 @@ async fn settings(user: AuthUser, conn: DbConn, flash: Option<FlashMessage<'_, '
     Template::render("settings", &data)
 }
 
-#[get("/add")]
-fn add_homework(user: AuthUser, flash: Option<FlashMessage>) -> Template {
-    let data = if let Some(msg) = flash {
-        let msg = msg.msg();
-        json!({
-            "title": "Add Homework",
-            "flash": msg,
-            "user": user,
-        })
-    } else {
-        json!({
-            "title": "Add Homework",
-            "user": user,
-        })
-    };
+#[get("/add?<amount>&<weight>&<detail>")]
+fn add_homework(
+    user: AuthUser,
+    flash: Option<FlashMessage>,
+    amount: Option<i32>,
+    weight: Option<i32>,
+    detail: Option<String>,
+) -> Template {
+    let data = json!({
+        "title": "Add Homework",
+        "flash": flash.map(|f| String::from(f.msg())).unwrap_or(String::from("")),
+        "user": user,
+        "amount": amount,
+        "weight": weight,
+        "detail": detail,
+        "for_self": weight.map(|_| "checked"),
+    });
 
     Template::render("add_homework", &data)
 }
@@ -94,6 +96,25 @@ async fn index(user: AuthUser, conn: DbConn) -> Template {
     });
 
     Template::render("index", &data)
+}
+
+#[get("/past-due")]
+async fn past_due(user: AuthUser, conn: DbConn) -> Template {
+    let u = User::from(user).clone();
+    let u2 = u.clone();
+
+    let hw = conn
+        .run(move |c| actions::homework::get_late_homework(&u, c))
+        .await
+        .unwrap();
+
+    let data = json!({
+        "user": u2,
+        "title": "Home",
+        "hw": hw,
+    });
+
+    Template::render("past_due", &data)
 }
 
 #[get("/", rank = 2)]
