@@ -19,21 +19,19 @@ async fn settings(user: AuthUser, conn: DbConn, flash: Option<FlashMessage<'_, '
         .unwrap()
         .day_weights;
 
-    let data = if let Some(msg) = flash {
-        let msg = msg.msg();
-        json!({
-            "title": "Settings",
-            "flash": msg,
-            "user": user,
-            "weights": weights,
-        })
-    } else {
-        json!({
-            "title": "Settings",
-            "user": user,
-            "weights": weights,
-        })
-    };
+    let (c, cn) = user.class_name.as_ref().map_or((None, None), |s| {
+        let s: Vec<_> = s.split('-').take(2).collect();
+        (s[0].parse::<i32>().ok(), Some(String::from(s[1])))
+    });
+
+    let data = json!({
+        "title": "Settings",
+        "flash": flash.map(|f| String::from(f.msg())).unwrap_or(String::from("")),
+        "user": user,
+        "weights": weights,
+        "class": c,
+        "class_name": cn,
+    });
 
     Template::render("settings", &data)
 }
@@ -113,7 +111,7 @@ async fn past_due(user: AuthUser, conn: DbConn) -> Template {
 
     let data = json!({
         "user": u2,
-        "title": "Home",
+        "title": "Past due",
         "hw": hw,
     });
 

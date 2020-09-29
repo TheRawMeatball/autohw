@@ -550,11 +550,11 @@ pub fn delete_complete_hw(conn: &PgConnection) {
             inner join "homework" on "homework"."id" = "hw_progress"."homework_id"
             where ("homework"."amount" = "hw_progress"."progress") and ("homework"."due_date" <= '{}')
         );
-        "#, now);
+        "#,
+        now
+    );
 
-    diesel::sql_query(query)
-        .execute(conn)
-        .unwrap();
+    diesel::sql_query(query).execute(conn).unwrap();
 
     {
         use schema::homework::dsl::*;
