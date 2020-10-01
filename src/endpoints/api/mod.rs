@@ -1,8 +1,13 @@
 use crate::pub_imports::*;
 
+mod class;
 mod homework;
 mod user;
 
 pub fn routes() -> Vec<rocket::Route> {
-    user::routes().add(homework::routes()).set_root("/api")
+    vec![]
+        .add(user::routes())
+        .add(homework::routes())
+        .add(class::routes())
+        .set_root("/api")
 }

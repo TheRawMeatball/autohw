@@ -31,10 +31,16 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .attach(DbConn::fairing())
         .attach(handlebars_helpers::helpers())
-        .attach(AdHoc::on_attach("Static Files config", |mut rocket| async {
-            let files_path = rocket.config().await.get_string("static_files_path")
-                .expect("missing static files path!");
-            Ok(rocket.mount("/static", StaticFiles::from(files_path)))
-        }))
+        .attach(AdHoc::on_attach(
+            "Static Files config",
+            |mut rocket| async {
+                let files_path = rocket
+                    .config()
+                    .await
+                    .get_string("static_files_path")
+                    .expect("missing static files path!");
+                Ok(rocket.mount("/static", StaticFiles::from(files_path)))
+            },
+        ))
         .mount("/", endpoints::routes())
 }

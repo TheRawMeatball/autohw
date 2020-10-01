@@ -1,0 +1,231 @@
+{{#*inline "head"}}
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no"/>
+	<style>
+		.literally.toolbar-hidden .lc-drawing {
+		 left:0;
+		 right:0;
+		 bottom:0;
+		 top:0
+		}
+		.literally {
+		 position:relative;
+		 background-color:#000;
+		 min-height:400px;
+		 user-select:none; 
+		}
+		.literally>* {
+		 position:absolute
+		}
+		.literally .lc-drawing>* {
+		 position:absolute;
+		 top:0;
+		 right:0;
+		 bottom:0;
+		 left:0
+		}
+	</style>
+{{/inline}}
+
+{{#*inline "page"}}
+	<div class="fs-container">
+		<div class="mb-2">
+			<div class="btn-group mb-2">
+				<button class="btn btn-primary" id="undo-lc">Undo</button>
+				<button class="btn btn-primary" id="redo-lc">Redo</button>
+				<button class="btn btn-primary" id="clear-lc">Clear</button>
+			</div>
+			<div class="btn-group mb-2">
+				<button class="btn btn-primary" id="tool-pencil">Pencil</button>
+				<button class="btn btn-primary" id="tool-eraser">Eraser</button>
+				<button class="btn btn-primary" id="tool-text">Text</button>
+				<button class="btn btn-primary" id="tool-line">Line</button>
+			</div>
+
+			<div class="btn-group mb-2" id="tools-colors">
+				<button class="btn btn-primary" id="colorTool-white">White</button>
+				<button class="btn btn-primary" id="colorTool-green">Green</button>
+				<button class="btn btn-primary" id="colorTool-red">Red</button>
+			</div>
+
+			<div class="btn-group mb-2" id="tools-colors">
+				<button class="btn btn-primary" id="sizeTool-1">Thin</button>
+				<button class="btn btn-primary" id="sizeTool-2">Medium</button>
+				<button class="btn btn-primary" id="sizeTool-3">Thick</button>
+			</div>
+		</div>
+
+	  	<div class="literally" style="touch-action: none;"></div>
+	</div>    
+{{/inline}}
+
+{{#*inline "script"}}
+	<script src="/static/lib/js/literallycanvas-core.min.js"></script>
+	<script type="text/javascript">
+		var lc = null;
+		var tools;
+		var strokeWidths;
+		var colors;
+
+		var setCurrentByName;
+		var findByName;
+
+		// the only LC-specific thing we have to do
+		var containerOne = document.getElementsByClassName('literally')[0];
+	
+		let bcr = containerOne.getBoundingClientRect();
+		let width = window.innerWidth - bcr.left;
+		let height = window.innerHeight - bcr.top;
+
+		let size = Math.min(Math.min(width, height) - 15, document.getElementById("main-container").clientWidth);
+		containerOne.style.width = size+"px";
+		containerOne.style.height = size+"px";
+
+		async function showLC(size) {
+			let resp = await fetch("/api/class/get-blackboard");
+			let body = await resp.json();
+
+			lc = LC.init(containerOne, {
+			  snapshot: body,
+			  defaultStrokeWidth: 10,
+			  strokeWidths: [10, 20, 50],
+			  secondaryColor: 'transparent'
+			});
+			window.lci = lc;
+
+			lc.setZoom(size / 1140);
+			
+			lc.on("drawingChange", async () => {
+				let json = JSON.stringify(window.lci.getSnapshot(["imageSize", "shapes"]));
+				await fetch("/api/class/save-blackboard", {
+					method: "POST",
+					body: json,
+				});
+			});
+
+			$("#undo-lc").click(function() {
+			  lc.undo();
+			});
+			$("#redo-lc").click(function() {
+			  lc.redo();
+			});
+			$("#clear-lc").click(function() {
+			  lc.clear();
+			});
+
+			// Set up our own tools...
+			tools = [
+			  {
+				name: 'pencil',
+				el: document.getElementById('tool-pencil'),
+				tool: new LC.tools.Pencil(lc)
+			  },{
+				name: 'eraser',
+				el: document.getElementById('tool-eraser'),
+				tool: new LC.tools.Eraser(lc)
+			  },{
+				name: 'text',
+				el: document.getElementById('tool-text'),
+				tool: new LC.tools.Text(lc)
+			  },{
+				name: 'line',
+				el: document.getElementById('tool-line'),
+				tool: new LC.tools.Line(lc)
+			  }
+			];
+
+			strokeWidths = [
+			  {
+				name: 10,
+				el: document.getElementById('sizeTool-1'),
+				size: 10
+			  },{
+				name: 20,
+				el: document.getElementById('sizeTool-2'),
+				size: 20
+			  },{
+				name: 50,
+				el: document.getElementById('sizeTool-3'),
+				size: 50
+			  }
+			];
+
+			colors = [
+			  {
+				name: 'white',
+				el: document.getElementById('colorTool-white'),
+				color: '#fff'
+			  },{
+				name: 'green',
+				el: document.getElementById('colorTool-green'),
+				color: '#00ff00'
+			  },{
+				name: 'red',
+				el: document.getElementById('colorTool-red'),
+				color: '#ff0000'
+			  }
+			];
+
+			setCurrentByName = function(ary, val) {
+			  ary.forEach(function(i) {
+				$(i.el).toggleClass('current', (i.name == val));
+			  });
+			};
+
+			findByName = function(ary, val) {
+			  var vals;
+			  vals = ary.filter(function(v){
+				return v.name == val;
+			  });
+			  if ( vals.length == 0 )
+				return null;
+			  else
+				return vals[0];
+			};
+
+			// Wire tools
+			tools.forEach(function(t) {
+			  $(t.el).click(function() {
+				var sw;
+
+				lc.setTool(t.tool);
+				setCurrentByName(tools, t.name);
+				setCurrentByName(strokeWidths, t.tool.strokeWidth);
+				$('#tools-sizes').toggleClass('disabled', (t.name == 'text'));
+			  });
+			});
+			setCurrentByName(tools, tools[0].name);
+
+			// Wire Stroke Widths
+			strokeWidths.forEach(function(sw) {
+			  $(sw.el).click(function() {
+				lc.trigger('setStrokeWidth', sw.size);
+				setCurrentByName(strokeWidths, sw.name);
+			  })
+			})
+			setCurrentByName(strokeWidths, strokeWidths[0].name);
+
+			// Wire Colors
+			colors.forEach(function(clr) {
+			  $(clr.el).click(function() {
+				lc.setColor('primary', clr.color)
+				setCurrentByName(colors, clr.name);
+			  })
+			})
+			setCurrentByName(colors, colors[0].name);
+			lc.setColor("primary", "#fff");
+		};
+
+		$(document).ready(() => {
+		  // disable scrolling on touch devices so we can actually draw
+		  $(document).bind('touchmove', (e) => {
+			if (e.target === document.documentElement) {
+			  return e.preventDefault();
+			}
+		  });
+		  showLC(size);
+		});
+	</script>
+{{/inline}}
+
+{{~> layout~}}

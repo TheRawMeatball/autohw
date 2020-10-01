@@ -18,6 +18,8 @@ base64 = "0.12"
 futures = "0.3"
 enum-as-inner = "0.3.3"
 num-traits = "0.2"
+async-compression = { version = "0.3.5", features = ["tokio-02", "brotli"] }
+tokio = "0.2"
 
 [dependencies.rocket_contrib]
 git = "https://github.com/SergioBenitez/Rocket"

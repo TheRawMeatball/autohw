@@ -44,6 +44,24 @@ pub fn get_class_by_id(
     }
 }
 
+pub fn set_blackboard(
+    get_id: i32,
+    new_blackboard: String,
+    conn: &PgConnection,
+) -> Result<(), ClassApiError> {
+    use schema::classes::dsl::*;
+
+    let mut class = classes
+        .filter(id.eq(get_id))
+        .first::<DbClassModel>(conn)
+        .map_err(|e| ClassApiError::DieselError(e))?;
+
+    class.blackboard = new_blackboard;
+
+    class.save_changes::<DbClassModel>(conn).unwrap();
+    Ok(())
+}
+
 #[derive(Debug)]
 pub enum ClassApiError {
     DieselError(diesel::result::Error),

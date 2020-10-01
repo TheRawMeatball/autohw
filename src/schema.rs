@@ -10,6 +10,7 @@ table! {
     classes (id) {
         id -> Int4,
         name -> Text,
+        blackboard -> Text,
     }
 }
 

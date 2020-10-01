@@ -6,7 +6,14 @@ use rocket_contrib::templates::Template;
 mod api;
 
 pub fn routes() -> Vec<rocket::Route> {
-    api::routes().add(routes![index, login, add_homework, settings, past_due])
+    api::routes().add(routes![
+        index,
+        login,
+        add_homework,
+        settings,
+        past_due,
+        blackboard
+    ])
 }
 
 #[get("/settings")]
@@ -133,4 +140,15 @@ fn login(flash: Option<FlashMessage>) -> Template {
     };
 
     Template::render("login", &data)
+}
+
+#[get("/blackboard")]
+fn blackboard(user: AuthUser) -> Template {
+    let data = json!(
+    {
+        "title": "Blackboard",
+        "user": User::from(user)
+    });
+
+    Template::render("blackboard", &data)
 }
