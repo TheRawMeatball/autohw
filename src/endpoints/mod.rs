@@ -147,7 +147,8 @@ fn blackboard(user: AuthUser) -> Template {
     let data = json!(
     {
         "title": "Blackboard",
-        "user": User::from(user)
+        "user": User::from(user),
+        "fluid": "-fluid"
     });
 
     Template::render("blackboard", &data)

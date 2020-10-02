@@ -11,7 +11,6 @@
 		.literally {
 		 position:relative;
 		 background-color:#000;
-		 min-height:400px;
 		 user-select:none; 
 		}
 		.literally>* {
@@ -76,14 +75,14 @@
 		let bcr = containerOne.getBoundingClientRect();
 		let width = window.innerWidth - bcr.left;
 		let height = window.innerHeight - bcr.top;
-
-		let size = Math.min(Math.min(width, height) - 15, document.getElementById("main-container").clientWidth);
-		containerOne.style.width = size+"px";
+		
+		let size = Math.min(width / 2, height) - 15;
+		containerOne.style.width = (size * 2)+"px";
 		containerOne.style.height = size+"px";
 
 		async function showLC(size) {
 			let resp = await fetch("/api/class/get-blackboard");
-			let body = await resp.json();
+		    let body = await resp.json();
 
 			lc = LC.init(containerOne, {
 			  snapshot: body,
@@ -93,7 +92,7 @@
 			});
 			window.lci = lc;
 
-			lc.setZoom(size / 1140);
+			lc.setZoom(size / 1024);
 			
 			lc.on("drawingChange", async () => {
 				let json = JSON.stringify(window.lci.getSnapshot(["imageSize", "shapes"]));
