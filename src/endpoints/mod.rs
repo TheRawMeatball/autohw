@@ -90,7 +90,13 @@ async fn index(user: AuthUser, conn: DbConn) -> Template {
         .map(|x| x as i16)
         .collect();
 
-    let schedule = actions::homework::create_schedule(&hw, &weights[0..7]);
+    let schedule = actions::homework::create_schedule(
+        &hw.clone()
+            .into_iter()
+            .filter(|x| x.amount > x.progress + x.delta)
+            .collect(),
+        &weights[0..7],
+    );
 
     let data = json!({
         "user": u2,
