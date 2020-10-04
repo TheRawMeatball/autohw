@@ -93,7 +93,7 @@ async fn index(user: AuthUser, conn: DbConn) -> Template {
     let schedule = actions::homework::create_schedule(
         &hw.clone()
             .into_iter()
-            .filter(|x| x.amount > x.progress + x.delta)
+            .filter(|x| x.amount > x.progress)
             .collect(),
         &weights[0..7],
     );
