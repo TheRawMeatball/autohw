@@ -239,7 +239,7 @@ pub fn get_homework_for_user(
                 && hw.last_repeat_reset != Some(now)
             {
                 x.last_repeat_reset = Some(now);
-                if hw.progress - hw.amount >= 0 {
+                if x.progress - hw.amount >= 0 {
                     x.progress -= hw.amount;
                 }
             }
