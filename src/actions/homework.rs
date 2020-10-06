@@ -358,7 +358,7 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Ve
         })
         .collect();
 
-    all.sort_by_key(|x| x.due);
+    all.sort_by_cached_key(|x| (x.due, -x.hw.amount, x.hw.detail.clone(), x.hw.db_id));
 
     distribute(&mut work_split);
 
