@@ -13,13 +13,13 @@ pub fn change_settings(
         return Err(UserApiError::UsernameTooShort);
     } else if model.password != model.confirm_password {
         return Err(UserApiError::MismatchedPasswords);
-    } else if model.password.len() < 6 && model.password.len() != 0 {
+    } else if model.password.len() < 6 && !model.password.is_empty() {
         return Err(UserApiError::PasswordTooShort);
     } else if users
         .select(diesel::dsl::count(id))
         .filter(name.eq(model.name.clone()).and(id.ne(user.id)))
         .first::<i64>(conn)
-        .map_err(|e| UserApiError::DieselError(e))?
+        .map_err(UserApiError::DieselError)?
         > 0
     {
         return Err(UserApiError::UserExists);
@@ -28,7 +28,7 @@ pub fn change_settings(
     let mut db_model = users
         .filter(id.eq(user.id))
         .first::<DbUserModel>(conn)
-        .map_err(|e| UserApiError::DieselError(e))?;
+        .map_err(UserApiError::DieselError)?;
 
     db_model.name = model.name.clone();
 
@@ -46,7 +46,7 @@ pub fn change_settings(
 
     db_model
         .save_changes::<DbUserModel>(conn)
-        .map_err(|e| UserApiError::DieselError(e))
+        .map_err(UserApiError::DieselError)
 }
 
 pub fn add_user(
@@ -63,11 +63,12 @@ pub fn add_user(
 
     use schema::users::dsl::*;
 
-    if let Some(_) = users
+    if users
         .filter(name.eq(&model.name))
         .first::<DbUserModel>(conn)
         .optional()
         .unwrap()
+        .is_some()
     {
         Err(UserApiError::UserExists)
     } else {
@@ -122,7 +123,7 @@ pub fn get_user_by_id(
         .filter(id.eq(get_id))
         .first::<DbUserModel>(conn)
         .optional()
-        .map_err(|e| UserApiError::DieselError(e))
+        .map_err(UserApiError::DieselError)
 }
 
 #[derive(Debug)]

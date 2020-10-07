@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::pub_imports::*;
 use schema::homework;
 use serde::{Deserialize, Serialize};
@@ -71,7 +73,7 @@ pub struct DailyHomework {
     pub amount: i32,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DueDate {
     Date(chrono::NaiveDate),
     Repeat(i32),
@@ -91,5 +93,22 @@ impl From<ProgressHomeworkModel> for UserHomework {
             },
             weight: m.weight,
         }
+    }
+}
+
+impl PartialOrd for DueDate {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (self, other) {
+            (DueDate::Repeat(_), DueDate::Date(_)) => Some(Ordering::Less),
+            (DueDate::Date(_), DueDate::Repeat(_)) => Some(Ordering::Greater),
+            (DueDate::Repeat(d1), DueDate::Repeat(d2)) => d1.partial_cmp(d2),
+            (DueDate::Date(d1), DueDate::Date(d2)) => d1.partial_cmp(d2),
+        }
+    }
+}
+
+impl Ord for DueDate {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }

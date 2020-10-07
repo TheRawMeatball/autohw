@@ -33,7 +33,7 @@ async fn settings(user: AuthUser, conn: DbConn, flash: Option<FlashMessage<'_, '
 
     let data = json!({
         "title": "Settings",
-        "flash": flash.map(|f| String::from(f.msg())).unwrap_or(String::from("")),
+        "flash": flash.map(|f| String::from(f.msg())).unwrap_or_else(|| String::from("")),
         "user": user,
         "weights": weights,
         "class": c,
@@ -53,7 +53,7 @@ fn add_homework(
 ) -> Template {
     let data = json!({
         "title": "Add Homework",
-        "flash": flash.map(|f| String::from(f.msg())).unwrap_or(String::from("")),
+        "flash": flash.map(|f| String::from(f.msg())).unwrap_or_else(|| String::from("")),
         "user": user,
         "amount": amount,
         "weight": weight,
@@ -75,7 +75,7 @@ async fn index(user: AuthUser, conn: DbConn) -> Template {
         .await
         .unwrap();
 
-    let hw = conn
+    let mut hw = conn
         .run(move |c| actions::homework::get_homework_for_user(&u, c))
         .await
         .unwrap();
@@ -94,9 +94,11 @@ async fn index(user: AuthUser, conn: DbConn) -> Template {
         &hw.clone()
             .into_iter()
             .filter(|x| x.amount > x.progress)
-            .collect(),
+            .collect::<Vec<_>>(),
         &weights[0..7],
     );
+
+    hw.sort_by_key(|x| (x.due_date, x.amount, x.detail.clone()));
 
     let data = json!({
         "user": u2,

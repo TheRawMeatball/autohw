@@ -54,7 +54,7 @@ pub fn set_blackboard(
     let mut class = classes
         .filter(id.eq(get_id))
         .first::<DbClassModel>(conn)
-        .map_err(|e| ClassApiError::DieselError(e))?;
+        .map_err(ClassApiError::DieselError)?;
 
     class.blackboard = new_blackboard;
 

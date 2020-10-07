@@ -18,7 +18,7 @@ pub fn change_progress(
         .filter(user_id.eq(user.id).and(homework_id.eq(change_model.id)))
         .first(conn)
         .optional()
-        .map_err(|e| HomeworkApiError::DieselError(e))?
+        .map_err(HomeworkApiError::DieselError)?
         .unwrap();
 
     if change_model.use_delta {
@@ -35,7 +35,7 @@ pub fn change_progress(
     model
         .save_changes::<HWProgressModel>(conn)
         .map(|_| ())
-        .map_err(|e| HomeworkApiError::DieselError(e))
+        .map_err(HomeworkApiError::DieselError)
 }
 
 pub fn set_weight(
@@ -48,7 +48,7 @@ pub fn set_weight(
     diesel::update(hw_progress.filter(user_id.eq(user.id).and(homework_id.eq(change_model.id))))
         .set(weight.eq(change_model.weight))
         .execute(conn)
-        .map_err(|e| HomeworkApiError::DieselError(e))
+        .map_err(HomeworkApiError::DieselError)
         .map(|_| ())
 }
 
@@ -86,7 +86,7 @@ pub fn add_homework(
         diesel::insert_into(homework)
             .values(insert)
             .get_result::<DbHomeworkModel>(conn)
-            .map_err(|e| HomeworkApiError::DieselError(e))?
+            .map_err(HomeworkApiError::DieselError)?
             .id
     };
 
@@ -107,7 +107,7 @@ pub fn add_homework(
             .filter(class_id.eq(user.class_id))
             .select(id)
             .load(conn)
-            .map_err(|e| HomeworkApiError::DieselError(e))?
+            .map_err(HomeworkApiError::DieselError)?
             .iter()
             .map(|user_id| HWProgressModel {
                 user_id: *user_id,
@@ -127,7 +127,7 @@ pub fn add_homework(
         diesel::insert_into(hw_progress)
             .values(insert)
             .execute(conn)
-            .map_err(|e| HomeworkApiError::DieselError(e))?;
+            .map_err(HomeworkApiError::DieselError)?;
     }
 
     Ok(())
@@ -142,7 +142,7 @@ pub fn build_progress_table(user: &User, conn: &PgConnection) -> Result<(), Home
         homework
             .filter((user_id.eq(user.id).or(class_id.eq(user.class_id))).and(due_date.gt(now)))
             .load::<DbHomeworkModel>(conn)
-            .map_err(|e| HomeworkApiError::DieselError(e))?
+            .map_err(HomeworkApiError::DieselError)?
     };
 
     let user_progress = {
@@ -151,7 +151,7 @@ pub fn build_progress_table(user: &User, conn: &PgConnection) -> Result<(), Home
         hw_progress
             .filter(user_id.eq(user.id))
             .load::<HWProgressModel>(conn)
-            .map_err(|e| HomeworkApiError::DieselError(e))?
+            .map_err(HomeworkApiError::DieselError)?
     };
 
     let inserts: Vec<_> = user_hw
@@ -159,8 +159,7 @@ pub fn build_progress_table(user: &User, conn: &PgConnection) -> Result<(), Home
         .filter_map(|hw: &DbHomeworkModel| {
             if user_progress
                 .iter()
-                .find(|&x| x.user_id == user.id && x.homework_id == hw.id)
-                .is_some()
+                .any(|x| x.user_id == user.id && x.homework_id == hw.id)
             {
                 None
             } else {
@@ -183,7 +182,7 @@ pub fn build_progress_table(user: &User, conn: &PgConnection) -> Result<(), Home
         diesel::insert_into(hw_progress)
             .values(inserts)
             .execute(conn)
-            .map_err(|e| HomeworkApiError::DieselError(e))?;
+            .map_err(HomeworkApiError::DieselError)?;
     }
 
     Ok(())
@@ -217,7 +216,7 @@ pub fn get_homework_for_user(
                 schema::hw_progress::last_repeat_reset,
             ))
             .load::<ProgressHomeworkModel>(conn)
-            .map_err(|e| HomeworkApiError::DieselError(e))?
+            .map_err(HomeworkApiError::DieselError)?
     };
 
     for hw in result.iter() {
@@ -250,7 +249,7 @@ pub fn get_homework_for_user(
 
     Ok(result
         .into_iter()
-        .map(|model| UserHomework::from(model))
+        .map(UserHomework::from)
         .collect())
 }
 
@@ -270,17 +269,17 @@ impl HwModel {
     }
 }
 
-pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Vec<DailyHomework>)> {
+pub fn create_schedule(all: &[UserHomework], weights: &[i16]) -> Vec<(i32, Vec<DailyHomework>)> {
     let now = now();
 
     let last_date = all
         .iter()
         .filter_map(|m| match &m.due_date {
-            DueDate::Date(d) => Some(d.clone()),
+            DueDate::Date(d) => Some(*d),
             _ => None,
         })
         .max()
-        .unwrap_or(now.succ());
+        .unwrap_or_else(|| now.succ());
 
     let mut last_day = (last_date - now).num_days().abs();
 
@@ -325,7 +324,7 @@ pub fn create_schedule(all: &Vec<UserHomework>, weights: &[i16]) -> Vec<(i32, Ve
                             });
                         }
 
-                        date = date + one_week;
+                        date += one_week;
                     } else {
                         break;
                     }
@@ -501,7 +500,7 @@ pub fn get_late_homework(
                 schema::hw_progress::last_repeat_reset,
             ))
             .load::<ProgressHomeworkModel>(conn)
-            .map_err(|e| HomeworkApiError::DieselError(e))?
+            .map_err(HomeworkApiError::DieselError)?
     };
 
     for hw in result.iter() {
