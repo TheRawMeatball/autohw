@@ -403,6 +403,9 @@ pub fn create_schedule(all: &[UserHomework], weights: &[i16]) -> Vec<(i32, Vec<D
                         load -= eleft;
                     }
                 }
+
+                for_today.sort_by_cached_key(|x| (x.hw.due_date, x.hw.amount, x.hw.detail.clone(), x.hw.db_id));
+
                 v.push((day as i32, for_today));
                 (all, v, next_borrow)
             },
