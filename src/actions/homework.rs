@@ -357,7 +357,7 @@ pub fn create_schedule(all: &[UserHomework], weights: &[i16]) -> Vec<(i32, Vec<D
         })
         .collect();
 
-    all.sort_by_cached_key(|x| (x.due, x.hw.amount, x.hw.detail.clone(), x.hw.db_id));
+    all.sort_by_key(|x| (x.due, x.hw.amount, x.hw.db_id));
 
     distribute(&mut work_split);
 
@@ -413,7 +413,7 @@ pub fn create_schedule(all: &[UserHomework], weights: &[i16]) -> Vec<(i32, Vec<D
         .1
         .into_iter()
         .map(|(due, mut vec)| {
-            vec.sort_by_key(|hw| hw.hw.db_id);
+            vec.sort_by_cached_key(|hw| hw.hw.detail.clone());
             (due, vec)
         })
         .collect()
@@ -486,9 +486,10 @@ pub fn get_late_homework(
         source
             .filter(
                 (user_id.eq(user.id).or(class_id.eq(user.class_id)))
+                    .and(schema::hw_progress::user_id.eq(user.id))
+                    .and(schema::hw_progress::progress.lt(amount))
                     .and(due_date.le(now))
-                    .and(due_date.is_not_null())
-                    .and(schema::hw_progress::user_id.eq(user.id)),
+                    .and(due_date.is_not_null()),
             )
             .select((
                 id,
@@ -526,7 +527,10 @@ pub fn get_late_homework(
     Ok(result.into_iter().map(|phm| phm.into()).collect())
 }
 
+#[allow(unreachable_code)]
+#[allow(unused_variables)]
 pub fn delete_old_hw_for_user(uid: i32, old: i32, conn: &PgConnection) {
+    return;
     use schema::hw_progress::dsl::*;
 
     diesel::delete(hw_progress.filter(homework_id.eq(old).and(user_id.eq(uid))))
@@ -542,7 +546,10 @@ pub fn delete_old_hw_for_user(uid: i32, old: i32, conn: &PgConnection) {
     }
 }
 
+#[allow(unreachable_code)]
+#[allow(unused_variables)]
 pub fn delete_complete_hw(conn: &PgConnection) {
+    return;
     let now = now();
 
     let query = format!(
